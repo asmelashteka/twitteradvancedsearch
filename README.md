@@ -1,10 +1,11 @@
-This tool is a wrapper around Twitter Advanced Search
-https://twitter.com/search-advanced
+## Twitter Advanced Search Wrapper
 
-Here are a few usage examples:
+This tool is a wrapper around [Twitter Advanced Search] (https://twitter.com/search-advanced)
+
+## Usage examples:
 
 (1) To screen-scrape the resulting tweets for a query with the hashtags
-#charlie or #hebdo since 2016-0701 until 2016-08-22
+\#charlie or \#hebdo since 2016-0701 until 2016-08-22
 
 python advancedsearch.py -ht "charlie hebdo" -s 2016-07-01 -u 2016-08-02
 
