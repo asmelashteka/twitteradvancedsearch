@@ -1,49 +1,49 @@
 # Modify parameter values to suite your search criteria
 
 # any of these words
-ANYWORDS=brexit ukip
+ANYWORDS = brexit ukip
 
 # all of these words
-ALLWORDS
+ALLWORDS = None
 
 # this exact phrase
-EXACTPHRASE
+EXACTPHRASE = None
 
 # from these accounts
-FROMUSERS
+FROMUSERS = None
 
 # these hashtags
-HASHTAGS=uk
+HASHTAGS = uk
 
 # language
-LANG=EN
+LANG = EN
 
 # mentioning these accounts
-MENTIONUSERS
+MENTIONUSERS = None
 
-# select negative :('
-NEGATIVE
+# select negative :( tweets
+NEGATIVE = False
 
-NONEWORDS
-# none of these words
+## none of these words
+NONEWORDS = None
 
 # near this place
-PLACE
+PLACE = None
 
-# select positive :)
-POSITIVE
+# select positive :) tweets. Possible values [True|False]
+POSITIVE = False
 
-# download raw tweet
-RAW
+# download raw tweet. Possible values [True|False]
+RAW = False
 
-# include retweets
-RETWEETS
+# include retweets. Possible values [True|False]
+RETWEETS = False 
 
 # since date yyyy-mm-dd
-SINCE=2016-06-01
+SINCE = 2016-06-01
 
 # to these accounts
-TOUSERS
+TOUSERS = None
 
 # until date yyyy-mm-dd
-UNTIL=2016-07-01
+UNTIL = 2016-07-01
