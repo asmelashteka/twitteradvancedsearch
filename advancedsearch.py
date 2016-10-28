@@ -201,8 +201,9 @@ def read_config(fin):
     res = {}
     with open(os.path.join(APP_DATA, fin), 'rb') as f:
         for line in f:
-            if line.strip() and line[0] == '#': continue
-            key, val = line.decode('utf-8').split('=')
+            line = line.decode('utf-8').strip()
+            if line == '' or line[0] == '#' or line[-1] == '=': continue
+            key, val = line.split('=')
             res[key.strip().lower()] = val.strip()
     return res
 
@@ -221,7 +222,7 @@ def read_args():
     parser.add_argument('-ht', '--hashtags', help='these hashtags')
     parser.add_argument('-l',  '--language', help='written in language')
     parser.add_argument('-musers',  '--mentionusers', help='mentioning these accounts')
-    parser.add_argument('-m', '--mode', help='input from cmd or file', choices=['file','cmd'], default='file')
+    parser.add_argument('-m', '--mode', help='input from cmd or file', choices=['file','cmd'], default='cmd')
     parser.add_argument('-neg',  '--negative', help='select negative :(', choices=[True, False])
     parser.add_argument('-none', '--nonewords', help='none of these words')
     parser.add_argument('-p',  '--place', help='near this place')
