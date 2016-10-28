@@ -12,8 +12,6 @@ EXACTPHRASE
 # from these accounts
 FROMUSERS
 
-FIN=SEARCH.TXT
-
 # these hashtags
 HASHTAGS=uk
 
