@@ -39,9 +39,9 @@ escape $ in $AAPL ote we need to escape $ in $AAPL
 python advancedsearch.py -any \$AAPL -s 2016-07-01 -u 2016-08-02
 
 
-## more options
-
+## more options (help)
 For more options supported by the tool run:
+
 python advancedsearch.py -h
 
 
