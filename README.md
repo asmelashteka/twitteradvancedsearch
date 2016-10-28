@@ -34,7 +34,7 @@ python advancedsearch.py -mode file
 ## searching for any keywords or symbols
 
 Searching for any keywords, e.g., cashtags such as $AAPL. Note we need to
-escape $ in $AAPL ote we need to escape $ in $AAPL
+escape $ in $AAPL.
 
 python advancedsearch.py -any \$AAPL -s 2016-07-01 -u 2016-08-02
 
