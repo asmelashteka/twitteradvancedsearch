@@ -74,7 +74,7 @@ class AdvancedSearchWrapper():
     to crawl past tweets starting right from the very first tweet.
     """
     TWEET = namedtuple('TWEET',
-            'timestamp, user_id, tweet_id, tweet_text, screen_name, user_name, rt_cnt, fv_cnt')
+            'timestamp, created_at, user_id, tweet_id, tweet_text, screen_name, user_name, rt_cnt, fv_cnt')
 
     def __init__(self, url='https://twitter.com/search'):
         self.url = url
@@ -90,6 +90,7 @@ class AdvancedSearchWrapper():
     def run(self, payload):
         while True:
             r = self.session.get(self.url, params=payload)
+            #sys.stderr.write('{} {}\n'.format(time.asctime(), r.url))
             html_result, min_position = self.parse_response(r)
             tweets = self.parse_result(html_result)
             if len(tweets) == 0: break
@@ -136,15 +137,16 @@ class AdvancedSearchWrapper():
         s = BeautifulSoup(t, 'html.parser')
         timestamp = time.asctime()
         for e in s.findAll('div', {'class' : 'original-tweet'}):
-            user_id = e.get('data-user-id', '')
-            tweet_id = e.get('data-tweet-id', '')
+            user_id     = e.get('data-user-id', '')
+            tweet_id    = e.get('data-tweet-id', '')
             screen_name = e.get('data-screen-name', '')
-            user_name = ' '.join(e.get('data-name', '').split())
-            tweet_text = ' '.join(e.find('p').text.split())
+            user_name   = e.get('data-name', '')
+            tweet_text  = e.find('p').text
+            created_at  = e.find('a', {'class':'tweet-timestamp'}).get('title','')
             rt_cnt = self.extract_val(e, cls='ProfileTweet-action--retweet')
             fv_cnt = self.extract_val(e, cls='ProfileTweet-action--favorite')
-            tweet = AdvancedSearchWrapper.TWEET(timestamp, user_id, tweet_id,
-                    tweet_text, screen_name, user_name, rt_cnt, fv_cnt)
+            tweet = AdvancedSearchWrapper.TWEET(timestamp, created_at,
+                    user_id, tweet_id, tweet_text, screen_name, user_name, rt_cnt, fv_cnt)
             tweets.append(tweet)
         return tweets
 
@@ -220,7 +222,7 @@ def read_args():
     parser.add_argument('-fusers',  '--fromusers', help='from these accounts')
     parser.add_argument('-f', '--fin', help='input file if mode is file', default='search.txt')
     parser.add_argument('-ht', '--hashtags', help='these hashtags')
-    parser.add_argument('-l',  '--language', help='written in language')
+    parser.add_argument('-l',  '--lang', help='written in language')
     parser.add_argument('-musers',  '--mentionusers', help='mentioning these accounts')
     parser.add_argument('-m', '--mode', help='input from cmd or file', choices=['file','cmd'], default='cmd')
     parser.add_argument('-neg',  '--negative', help='select negative :(', choices=[True, False])
@@ -238,20 +240,27 @@ def read_args():
 
 
 def gen_payload(args):
+    """ generate Query string
+    q: all "exact" any -none #ht lang:en from:f1 OR from:f2
+    to:t1 OR to:t2 @m1 OR @m2 near:"Hanover, Lower Saxony" within:15mi
+    since:2016-09-25 until:2016-09-30 :) :( ? include:retweets
+    """
 
     if not(args.get('allwords')    or \
            args.get('exactphrase') or \
            args.get('anywords')    or \
            args.get('nonewords')   or \
            args.get('hashtags')):
-        sys.stderr.write('No search terms\n')
+        sys.stderr.write('No search terms.\n')
         exit(1)
 
     if not verify_date_format(args.get('since')) or \
             not verify_date_format(args.get('until')):
-        sys.stderr.write('provide --since or --until properly in yyyy-mm-dd format\n')
+        sys.stderr.write('provide --since or --until in yyyy-mm-dd format\n')
         exit(1)
 
+    q = []
+    # words
     if args.get('allwords'):
         args['allwords'] = ' AND '.join([w for w in args['allwords'].split()])
 
@@ -267,7 +276,14 @@ def gen_payload(args):
     if args.get('hashtags'):
         args['hashtags'] = ' OR '.join(
                 ['#' + h if h[0] != '#' else h for h in args['hashtags'].split()])
+    words = 'allwords anywords exactphrase nonewords hashtags'.split()
+    q += [args[k] for k in words if args[k]]
 
+    # language
+    if args.get('lang'):
+        q += ['lang:' + args['lang']]
+
+    # people
     if args.get('fromusers'):
         args['fromusers'] = ' OR '.join(['from:' + u for u in args['fromusers'].split()])
 
@@ -277,11 +293,27 @@ def gen_payload(args):
     if args.get('mentionusers'):
         args['mentionusers'] = ' OR '.join(
                 ['@' + u if u[0] != '@' else u for u in args['mentionusers'].split()])
+    people = 'fromusers tousers mentionusers'.split()
+    q += [args[k] for k in people if args[k]]
 
-    terms = 'allwords anywords exactphrase nonewords hashtags'.split()
-    q = ' '.join([v for k,v in args.items() if v and k in terms])
-    payload = {k:v for k,v in args.items() if v and k not in terms}
-    payload['q'] = q
+    # places
+    if args.get('place'):
+        q += ['near:' + args['place']]
+
+    # dates
+    # TODO default date from now backwards
+    q += ['since:' + args['since'], 'until:' + args['until']]
+
+    if args.get('positive'):
+        q += [':)']
+
+    if args.get('negative'):
+        q += [':(']
+
+    if args.get('retweets'):
+        q += ['include:retweets']
+
+    payload = {'q': ' '.join(q)}
     return payload
 
 
