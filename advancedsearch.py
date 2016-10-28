@@ -73,8 +73,7 @@ class AdvancedSearchWrapper():
     https://dev.twitter.com/rest/reference/get/statuses/lookup
     to crawl past tweets starting right from the very first tweet.
     """
-    TWEET = namedtuple('TWEET',
-            'timestamp, created_at, user_id, tweet_id, tweet_text, screen_name, user_name, rt_cnt, fv_cnt')
+    TWEET = namedtuple('TWEET', 'created_at, user_id, tweet_id, tweet_text, screen_name, user_name, rt_cnt, fv_cnt')
 
     def __init__(self, url='https://twitter.com/search'):
         self.url = url
@@ -135,18 +134,18 @@ class AdvancedSearchWrapper():
         """
         tweets = []
         s = BeautifulSoup(t, 'html.parser')
-        timestamp = time.asctime()
         for e in s.findAll('div', {'class' : 'original-tweet'}):
             user_id     = e.get('data-user-id', '')
             tweet_id    = e.get('data-tweet-id', '')
             screen_name = e.get('data-screen-name', '')
             user_name   = e.get('data-name', '')
             tweet_text  = e.find('p').text
-            created_at  = e.find('a', {'class':'tweet-timestamp'}).get('title','')
+            created_at  = e.find('span', {'class':'_timestamp'}).get('data-time','')
+            created_at  = str(datetime.datetime.fromtimestamp(int(created_at)))
             rt_cnt = self.extract_val(e, cls='ProfileTweet-action--retweet')
             fv_cnt = self.extract_val(e, cls='ProfileTweet-action--favorite')
-            tweet = AdvancedSearchWrapper.TWEET(timestamp, created_at,
-                    user_id, tweet_id, tweet_text, screen_name, user_name, rt_cnt, fv_cnt)
+            tweet = AdvancedSearchWrapper.TWEET(created_at, user_id, tweet_id,
+                    tweet_text, screen_name, user_name, rt_cnt, fv_cnt)
             tweets.append(tweet)
         return tweets
 
