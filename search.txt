@@ -1,5 +1,51 @@
+# Modify parameter values to suite your search criteria
+
+# any of these words
 ANYWORDS=brexit ukip
+
+# all of these words
+ALLWORDS
+
+# this exact phrase
+EXACTPHRASE
+
+# from these accounts
+FROMUSERS
+
+FIN=SEARCH.TXT
+
+# these hashtags
 HASHTAGS=uk
-LANG=en
+
+# language
+LANG=EN
+
+# mentioning these accounts
+MENTIONUSERS
+
+# select negative :('
+NEGATIVE
+
+NONEWORDS
+# none of these words
+
+# near this place
+PLACE
+
+# select positive :)
+POSITIVE
+
+# download raw tweet
+RAW
+
+# include retweets
+RETWEETS
+
+# since date yyyy-mm-dd
 SINCE=2016-06-01
+
+# to these accounts
+TOUSERS
+
+# until date yyyy-mm-dd
 UNTIL=2016-07-01
