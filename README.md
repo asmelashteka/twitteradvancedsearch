@@ -52,6 +52,4 @@ For more options supported by the tool run:
 $ python advancedsearch.py -h
 ```
 
-NOTE:
-
 Please send any bugs or feature requests to teka@L3S.de.
