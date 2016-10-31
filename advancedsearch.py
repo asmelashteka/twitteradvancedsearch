@@ -29,6 +29,7 @@ class AdvancedSearch():
     def __init__(self, key=1):
         self.twitter_key = key
         self.TWEET_IDS = Queue()
+        self.TWEETS = Queue()
 
     def run(self, payload):
         sink = sink_stdout()
@@ -36,6 +37,11 @@ class AdvancedSearch():
         t2 = Thread(target=self.gen_raw_tweets, args=(sink,))
         t1.start()
         t2.start()
+        while True:
+            yield self.TWEETS.get()
+
+    def stop(self):
+        self.TWEET_IDS.put(AdvancedSearch._sentinel)
 
     def gen_tweet_ids(self, payload):
         """A thread that generates tweet ids for a historic search"""
@@ -64,6 +70,7 @@ class AdvancedSearch():
             tweet_ids = ','.join(tweet_ids)
             for tweet in api.post(ids=tweet_ids):
                 target.send(tweet)
+                self.TWEETS.put(tweet)
 
 
 class AdvancedSearchWrapper():
@@ -78,6 +85,7 @@ class AdvancedSearchWrapper():
     def __init__(self, url='https://twitter.com/search'):
         self.url = url
         self.session = self.set_session()
+        self.status = 'run'
 
     def set_session(self):
         user_agents = ['Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2227.0 Safari/537.36',
@@ -96,7 +104,12 @@ class AdvancedSearchWrapper():
             for tweet in tweets:
                 yield (tweet._asdict())
             time.sleep(random.random())
-            payload['min_position'] = min_position
+            payload['max_position'] = min_position
+            if self.status == 'stop':
+                break
+
+    def stop(self):
+        self.status = 'stop'
 
     def parse_response(self, r):
         """given r a response object from requests
@@ -186,7 +199,7 @@ def coroutine(func):
 def sink_stdout():
     while True:
         tweet = (yield)
-        print(json.dumps(tweet))
+        #print(json.dumps(tweet))
 
 
 def verify_date_format(s):
@@ -209,33 +222,13 @@ def read_config(fin):
     return res
 
 
-def read_args():
-    """ expose functionalities in https://twitter.com/search-advanced
-    as much as possible
-    """
-    parser = argparse.ArgumentParser(description='Twitter search advanced.')
 
-    parser.add_argument('-all',  '--allwords', help='all of these words')
-    parser.add_argument('-any',  '--anywords', help='any of these words')
-    parser.add_argument('-exact','--exactphrase', help='this exact phrase')
-    parser.add_argument('-fusers',  '--fromusers', help='from these accounts')
-    parser.add_argument('-f', '--fin', help='input file if mode is file', default='search.txt')
-    parser.add_argument('-ht', '--hashtags', help='these hashtags')
-    parser.add_argument('-l',  '--lang', help='written in language')
-    parser.add_argument('-musers',  '--mentionusers', help='mentioning these accounts')
-    parser.add_argument('-m', '--mode', help='input from cmd or file', choices=['file','cmd'], default='cmd')
-    parser.add_argument('-neg',  '--negative', help='select negative :(', choices=[True, False])
-    parser.add_argument('-none', '--nonewords', help='none of these words')
-    parser.add_argument('-p',  '--place', help='near this place')
-    parser.add_argument('-pos',  '--positive', help='select positive :)', choices=[True, False])
-    parser.add_argument('-r',  '--raw', help='download raw tweet', action='store_true')
-    parser.add_argument('-rt', '--retweets', help='include retweets', choices=[True, False])
-    parser.add_argument('-s',  '--since', help='since date yyyy-mm-dd')
-    parser.add_argument('-tusers',  '--tousers', help='to these accounts')
-    parser.add_argument('-u',  '--until', help='until date yyyy-mm-dd')
-
-    args = parser.parse_args()
-    return args
+def get_stream(raw=False, key=1):
+    if raw:
+        s = AdvancedSearch(key)
+    else:
+        s = AdvancedSearchWrapper()
+    return s
 
 
 def gen_payload(args):
@@ -316,52 +309,52 @@ def gen_payload(args):
     return payload
 
 
-def test_AdvancedSearchWrapper():
-    """example usage:
-    python advancedsearch.py -ht "charlie hebdo" -s 2016-07-01 -u 2016-08-02 > out
-    returns scrapped fields defined in TWEETS
-    """
-    args = read_args()
-    payload = gen_payload(vars(args))
-    s = AdvancedSearchWrapper()
-    sys.stderr.write('Request {}'.format(s.url))
-    for tweet in s.run(payload):
-        print(json.dumps(tweet))
-
-
-def test_AdvancedSearch():
-    """example usage:
-    python advancedsearch.py -ht "charlie hebdo" -s 2016-07-01 -u 2016-08-02 > out
-    returns raw json tweets
-    """
-    args = read_args()
-    payload = gen_payload(vars(args))
-    s = AdvancedSearch('text', 1, payload)
-    s.run()
-
-def test(wrapper=True):
-    if wrapper:
-        test_AdvancedSearchWrapper()
-    else:
-        test_AdvancedSearch()
-
-
-def main():
-    args = read_args()
+def read_payload(args):
     # script input mode: from command line vs file
     if args.mode == 'cmd':
         payload = gen_payload(vars(args))
     else:
         payload = gen_payload(read_config(args.fin))
+    return payload
 
-    # downloading raw json tweets or output of screen scrapping
-    if args.raw:
-        s = AdvancedSearch(1)
-        s.run(payload)
-    else:
-        s = AdvancedSearchWrapper()
-        for tweet in s.run(payload):
-            print(json.dumps(tweet))
+
+def read_args():
+    """ expose functionalities in https://twitter.com/search-advanced
+    as much as possible
+    """
+    parser = argparse.ArgumentParser(description='Twitter search advanced.')
+
+    parser.add_argument('-all',  '--allwords', help='all of these words')
+    parser.add_argument('-any',  '--anywords', help='any of these words')
+    parser.add_argument('-exact','--exactphrase', help='this exact phrase')
+    parser.add_argument('-fusers',  '--fromusers', help='from these accounts')
+    parser.add_argument('-f', '--fin', help='input file if mode is file', default='search.txt')
+    parser.add_argument('-ht', '--hashtags', help='these hashtags')
+    parser.add_argument('-k', '--key', help='Twitter key. entry to credentials.txt', default=1)
+    parser.add_argument('-l',  '--lang', help='written in language')
+    parser.add_argument('-musers',  '--mentionusers', help='mentioning these accounts')
+    parser.add_argument('-m', '--mode', help='input from cmd or file', choices=['file','cmd'], default='cmd')
+    parser.add_argument('-neg',  '--negative', help='select negative :(', choices=[True, False])
+    parser.add_argument('-none', '--nonewords', help='none of these words')
+    parser.add_argument('-p',  '--place', help='near this place')
+    parser.add_argument('-pos',  '--positive', help='select positive :)', choices=[True, False])
+    parser.add_argument('-r',  '--raw', help='download raw tweet', action='store_true')
+    parser.add_argument('-rt', '--retweets', help='include retweets', choices=[True, False])
+    parser.add_argument('-s',  '--since', help='since date yyyy-mm-dd')
+    parser.add_argument('-tusers',  '--tousers', help='to these accounts')
+    parser.add_argument('-u',  '--until', help='until date yyyy-mm-dd')
+
+    args = parser.parse_args()
+    return args
+
+
+def main():
+    args = read_args()
+    payload = read_payload(args)
+    stream = get_stream(args.raw, args.key)
+    for tweet in stream.run(payload):
+        print(json.dumps(tweet))
+
 
 if __name__ == '__main__':
     main()
