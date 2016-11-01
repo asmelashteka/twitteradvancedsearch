@@ -330,7 +330,7 @@ def read_args():
     parser.add_argument('-fusers',  '--fromusers', help='from these accounts')
     parser.add_argument('-f', '--fin', help='input file if mode is file', default='search.txt')
     parser.add_argument('-ht', '--hashtags', help='these hashtags')
-    parser.add_argument('-k', '--key', help='Twitter key. entry to credentials.txt', default=1)
+    parser.add_argument('-k', '--key', help='Twitter key entry to credentials.txt', default=1)
     parser.add_argument('-l',  '--lang', help='written in language')
     parser.add_argument('-musers',  '--mentionusers', help='mentioning these accounts')
     parser.add_argument('-m', '--mode', help='input from cmd or file', choices=['file','cmd'], default='cmd')

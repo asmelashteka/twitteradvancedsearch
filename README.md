@@ -1,6 +1,7 @@
-## Twitter Advanced Search Wrapper
+# Twitter Advanced Search
 
-This tool is a wrapper around [Twitter Advanced Search] (https://twitter.com/search-advanced)
+This tool is a wrapper around [Twitter Advanced Search]
+(https://twitter.com/search-advanced)
 
 ## Usage Examples:
 
@@ -11,7 +12,7 @@ or \#hebdo since 2016-0701 until 2016-08-22. This will print json
 representation of the output for the query parameters to the standard output.
 
 ```shell
-$ python advancedsearch.py -ht "charlie hebdo" -s 2016-07-01 -u 2016-08-02
+$ python advancedsearch.py -ht "charlie hebdo" -s 2015-01-06 -u 2016-02-06
 ```
 
 ## Retrieving raw json tweets
@@ -22,7 +23,7 @@ Note that to retrieve raw tweets, you will need Twitter keys. Please modify
 credentials.py with your appropriate keys.
 
 ```shell
-$ python advancedsearch.py -ht "charlie hebdo" -s 2016-07-01 -u 2016-08-02 --raw
+$ python advancedsearch.py -ht "charlie hebdo" -s 2015-01-06 -u 2016-02-06 --raw
 ```
 
 ## Reading parameters from file
@@ -36,10 +37,10 @@ file.
 $ python advancedsearch.py -mode file
 ```
 
-## Searching for any keywords or symbols
+## Searching for keywords or symbols
 
 Searching for any keywords, e.g., cashtags such as $AAPL. Note we need to
-escape $ in $AAPL.
+escape $ in $AAPL if we're calling the script from the command line.
 
 ```shell
 $ python advancedsearch.py -any \$AAPL -s 2016-07-01 -u 2016-08-02
