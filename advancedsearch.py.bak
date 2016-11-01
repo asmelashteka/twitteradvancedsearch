@@ -18,10 +18,10 @@ from twitter import REST_API
 
 class AdvancedSearch():
     """This class provides access to historic tweets.
-    It achieves this by combining
+    It achieves this by comgining
     (i) a wrapper to Twitter advanced search,
     https://twitter.com/search-advanced and
-    (ii) Twitter statuses look-up REST API,
+    (ii) Twitter statuses lookup REST API,
     https://dev.twitter.com/rest/reference/get/statuses/lookup
     """
     _sentinel   = object()
@@ -76,7 +76,7 @@ class AdvancedSearch():
 class AdvancedSearchWrapper():
     """This script is a wrapper to the Twitter advanced search,
     https://twitter.com/search-advanced
-    It's intended to be used in combination with the status look-up API,
+    It's intended to be used in combination with the status lookup API,
     https://dev.twitter.com/rest/reference/get/statuses/lookup
     to crawl past tweets starting right from the very first tweet.
     """
