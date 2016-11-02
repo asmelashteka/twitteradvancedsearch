@@ -276,6 +276,7 @@ def gen_payload(args):
         q += ['lang:' + args['lang']]
 
     # people
+    #TODO strip off @ if it exists in query
     if args.get('fromusers'):
         args['fromusers'] = ' OR '.join(['from:' + u for u in args['fromusers'].split()])
 

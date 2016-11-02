@@ -43,8 +43,13 @@ class TestAdvancedSearchWrapper(unittest.TestCase):
 
             self.assertTrue('charlie' in tweet_text or 'hebdo' in tweet_text)
 
-    def test_people(self):
-        pass
+    def test_from_people(self):
+        payload = {'q': 'from:hillaryclinton OR from:realdonaldtrump'}
+        for idx, tweet in enumerate(self.stream.run(payload)):
+            if idx == self.MAX_TWEETS: break
+            screen_name = tweet.get('screen_name').strip().lower()
+
+            self.assertTrue(screen_name in ('hillaryclinton', 'realdonaldtrump'))
 
     def test_location(self):
         payload = {'q': '#charlie OR #hebdo since:2015-01-06 until:2016-02-06'}
