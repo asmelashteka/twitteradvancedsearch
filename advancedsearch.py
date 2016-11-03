@@ -5,7 +5,6 @@ import time
 import random
 import argparse
 import datetime
-from urllib.parse import quote
 from collections import namedtuple
 from queue import Queue
 from threading import Thread
@@ -95,10 +94,12 @@ class AdvancedSearchWrapper():
         return s
 
     def run(self, payload):
+        r = self.session.get(self.url, params=payload)
+        self.url = 'https://twitter.com/i/search/timeline'
         while True:
-            r = self.session.get(self.url, params=payload)
             #sys.stderr.write('{} {}\n'.format(time.asctime(), r.url))
             html_result, min_position = self.parse_response(r)
+            sys.stderr.write('{} {}\n'.format(time.asctime(), min_position))
             tweets = self.parse_result(html_result)
             if len(tweets) == 0: break
             for tweet in tweets:
@@ -107,6 +108,7 @@ class AdvancedSearchWrapper():
             payload['max_position'] = min_position
             if self.status == 'stop':
                 break
+            r = self.session.get(self.url, params=payload)
 
     def stop(self):
         self.status = 'stop'
@@ -120,6 +122,13 @@ class AdvancedSearchWrapper():
         if 'html' in r_type: # first call
             html_result = r.text
             min_position = self.get_min_position(html_result)
+            max_position = self.get_max_position(html_result)
+
+            sys.stderr.write('-----------\n')
+            sys.stderr.write('{}\n'.format(min_position))
+            sys.stderr.write('{}\n'.format(max_position))
+            sys.stderr.write('-----------\n')
+
         elif 'json' in r_type: # subsequent calls
             j = json.loads(r.text)
             html_result = j.get('items_html')
@@ -128,6 +137,19 @@ class AdvancedSearchWrapper():
             sys.stderr.write('{} not valid HTML or JSON response.\n'.format(r_type))
             exit(1)
         return (html_result, min_position)
+
+    def get_max_position(self, t):
+        """t is a string search result
+        return maximum tweet id to iterate over next pages
+        """
+        cursor = 'data-max-position="'
+        if cursor not in t:
+            return None
+        idx = t.find(cursor) + len(cursor)
+        offset = t[idx:].find('"')
+        max_position = t[idx:idx + offset]
+        return max_position
+
 
     def get_min_position(self, t):
         """t is a string search result
@@ -222,15 +244,6 @@ def read_config(fin):
     return res
 
 
-
-def get_stream(raw=False, key=1):
-    if raw:
-        s = AdvancedSearch(key)
-    else:
-        s = AdvancedSearchWrapper()
-    return s
-
-
 def gen_payload(args):
     """ generate Query string
     q: all "exact" any -none #ht lang:en from:f1 OR from:f2
@@ -276,7 +289,7 @@ def gen_payload(args):
         q += ['lang:' + args['lang']]
 
     # people
-    #TODO strip off @ if it exists in query
+    #TODO strip off @ if it exists in query for from and to users
     if args.get('fromusers'):
         args['fromusers'] = ' OR '.join(['from:' + u for u in args['fromusers'].split()])
 
@@ -294,7 +307,7 @@ def gen_payload(args):
         q += ['near:' + args['place']]
 
     # dates
-    # TODO default date from now backwards
+    # TODO default date from now backwards if argument not given
     q += ['since:' + args['since'], 'until:' + args['until']]
 
     if args.get('positive'):
@@ -352,7 +365,10 @@ def read_args():
 def main():
     args = read_args()
     payload = read_payload(args)
-    stream = get_stream(args.raw, args.key)
+
+    if args.raw: stream = AdvancedSearch(args.key)
+    else: stream = AdvancedSearchWrapper()
+
     for tweet in stream.run(payload):
         print(json.dumps(tweet))
 
