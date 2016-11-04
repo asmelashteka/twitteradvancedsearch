@@ -9,6 +9,14 @@ class TestAdvancedSearch(unittest.TestCase):
     def setUp(self):
         self.stream = AdvancedSearch(key=1)
 
+    def test_location(self):
+        payload = {'location': 'hillaryclinton realdonaldtrump'}
+        pass
+
+    def test_language(self):
+        payload = {'q': '#charlie OR #hebdo since:2015-01-06 until:2016-02-06'}
+        pass
+
     def test_tweet_fields(self):
         pass
 
@@ -20,12 +28,16 @@ class TestAdvancedSearchWrapper(unittest.TestCase):
 
     def setUp(self):
         self.stream = AdvancedSearchWrapper()
-        self.MAX_TWEETS = 10
+        self.MAX_TWEETS = 50
 
     def test_date(self):
-        since = datetime.datetime.strptime('2015-01-06 00:00:00', '%Y-%m-%d %H:%M:%S')
-        until = datetime.datetime.strptime('2016-02-06 23:59:59', '%Y-%m-%d %H:%M:%S')
-        payload = {'q': '#charlie OR #hebdo since:2015-01-06 until:2016-02-06'}
+        since = datetime.datetime.strptime('2015-01-06 00:00:00',
+                '%Y-%m-%d %H:%M:%S')
+        until = datetime.datetime.strptime('2016-02-06 23:59:59',
+                '%Y-%m-%d %H:%M:%S')
+        payload = {'hashtag': 'charlie hebdo',
+                   'since': '2015-01-06',
+                   'until': '2016-02-06'}
         for idx, tweet in enumerate(self.stream.run(payload)):
             if idx == self.MAX_TWEETS:
                 self.stream.stop()
@@ -36,7 +48,9 @@ class TestAdvancedSearchWrapper(unittest.TestCase):
             self.assertTrue(since <= created_at and created_at <= until)
 
     def test_hashtags(self):
-        payload = {'q': '#charlie OR #hebdo since:2015-01-06 until:2016-02-06'}
+        payload = {'hashtag': 'charlie hebdo',
+                   'since': '2015-01-06',
+                   'until': '2016-02-06'}
         for idx, tweet in enumerate(self.stream.run(payload)):
             if idx == self.MAX_TWEETS: break
             tweet_text = tweet.get('tweet_text').lower()
@@ -44,20 +58,12 @@ class TestAdvancedSearchWrapper(unittest.TestCase):
             self.assertTrue('charlie' in tweet_text or 'hebdo' in tweet_text)
 
     def test_from_people(self):
-        payload = {'q': 'from:hillaryclinton OR from:realdonaldtrump'}
+        payload = {'fromuser': 'hillaryclinton realdonaldtrump'}
         for idx, tweet in enumerate(self.stream.run(payload)):
             if idx == self.MAX_TWEETS: break
             screen_name = tweet.get('screen_name').strip().lower()
 
             self.assertTrue(screen_name in ('hillaryclinton', 'realdonaldtrump'))
-
-    def test_location(self):
-        payload = {'q': '#charlie OR #hebdo since:2015-01-06 until:2016-02-06'}
-        pass
-
-    def test_lang(self):
-        payload = {'q': '#charlie OR #hebdo since:2015-01-06 until:2016-02-06'}
-        pass
 
 
 if __name__ == '__main__':

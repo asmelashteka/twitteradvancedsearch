@@ -30,7 +30,7 @@ class AdvancedSearch():
         self.TWEET_IDS = Queue()
         self.TWEETS = Queue()
 
-    def run(self, payload, daily):
+    def run(self, payload, daily=False):
         sink = sink_stdout()
         t1 = Thread(target=self.gen_tweet_ids, args=(payload, daily))
         t2 = Thread(target=self.gen_raw_tweets, args=(sink,))
@@ -91,13 +91,16 @@ class AdvancedSearchWrapper():
         s.headers.update({'User-Agent' : user_agent})
         return s
 
-    def run(self, payload, daily):
+    def run(self, payload, daily=False):
         if daily:
             stream = self.daily_search(payload)
         else:
             stream = self.search(payload)
         for tweet in stream:
             yield(tweet)
+
+    def stop(self):
+        self.status = 'stop'
 
     def daily_search(self, payload):
         for prev_day, next_day in self.gen_days(
@@ -107,10 +110,9 @@ class AdvancedSearchWrapper():
             for tweet in self.search(payload):
                 yield(tweet)
 
-
     def search(self, payload):
         self.url = 'https://twitter.com/search'
-        payload = gen_payload(payload)
+        payload = self.gen_payload(payload)
         r = self.session.get(self.url, params=payload)
         self.url = 'https://twitter.com/i/search/timeline'
         while True:
@@ -127,10 +129,79 @@ class AdvancedSearchWrapper():
             payload['max_position'] = min_position
             r = self.session.get(self.url, params=payload)
 
+    def gen_payload(self, args):
+        """ generate Query string
+        q: all "exact" any -none #ht lang:en from:f1 OR from:f2
+        to:t1 OR to:t2 @m1 OR @m2 near:"Hanover, Lower Saxony" within:15mi
+        since:2016-09-25 until:2016-09-30 :) :( ? include:retweets
+        """
+        q = []
+        # words
+        if args.get('allwords'):
+            all_words = ' AND '.join([w for w in args['allwords'].split()])
+            q.append(all_words)
 
+        if args.get('anywords'):
+            any_words = ' OR '.join([w for w in args['anywords'].split()])
+            q.append(any_words)
 
-    def stop(self):
-        self.status = 'stop'
+        if args.get('exactphrase'):
+            exact_phrase = '"' + args['exactphrase'].strip() + '"'
+            q.append(exact_phrase)
+
+        if args.get('nonewords'):
+            none_words = ' '.join(['- ' + w for w in args['nonewords'].split()])
+            q.append(none_words)
+
+        if args.get('hashtags'):
+            hashtags = ' OR '.join(['#' + h if h[0] != '#' else h
+                for h in args['hashtags'].split()])
+            q.append(hashtags)
+
+        # language
+        if args.get('lang'):
+            q.append('lang:' + args['lang'])
+
+        # people
+        #TODO strip off @ if it exists in query for from and to users
+        if args.get('fromusers'):
+            from_users = ' OR '.join(['from:' + u
+                for u in args['fromusers'].split()])
+            q.append(from_users)
+
+        if args.get('tousers'):
+            to_users = ' OR '.join(['to:' + u
+                for u in args['tousers'].split()])
+            q.append(to_users)
+
+        if args.get('mentionusers'):
+            mention_users = ' OR '.join(['@' + u if u[0] != '@' else u
+                for u in args['mentionusers'].split()])
+            q.append(mention_users)
+
+        # places
+        if args.get('place'):
+            q.append('near:' + args['place'])
+
+        # dates
+        # TODO default date from now backwards if argument not given
+        if args.get('since'):
+            q.append('since:' + args['since'])
+        if args.get('until'):
+            q.append('until:' + args['until'])
+
+        if args.get('positive'):
+            q.append(':)')
+
+        if args.get('negative'):
+            q.append(':(')
+
+        if args.get('retweets'):
+            q.append('include:retweets')
+
+        payload = {'q': ' '.join(q)}
+        return payload
+
 
     def parse_response(self, r):
         """given r a response object from requests
@@ -150,6 +221,7 @@ class AdvancedSearchWrapper():
             sys.stderr.write('{} not valid HTML or JSON response.\n'.format(r_type))
             exit(1)
         return (html_result, min_position)
+
 
     def get_max_position(self, t):
         """t is a string search result
@@ -264,69 +336,6 @@ def read_config(fin):
     return res
 
 
-def gen_payload(args):
-    """ generate Query string
-    q: all "exact" any -none #ht lang:en from:f1 OR from:f2
-    to:t1 OR to:t2 @m1 OR @m2 near:"Hanover, Lower Saxony" within:15mi
-    since:2016-09-25 until:2016-09-30 :) :( ? include:retweets
-    """
-    q = []
-    # words
-    if args.get('allwords'):
-        args['allwords'] = ' AND '.join([w for w in args['allwords'].split()])
-
-    if args.get('exactphrase'):
-        args['exactphrase'] = '"' + args['exactphrase'].strip() + '"'
-
-    if args.get('anywords'):
-        args['anywords'] = ' OR '.join([w for w in args['anywords'].split()])
-
-    if args.get('nonewords'):
-        args['nonewords'] = ' '.join(['- ' + w for w in args['nonewords'].split()])
-
-    if args.get('hashtags'):
-        args['hashtags'] = ' OR '.join(
-                ['#' + h if h[0] != '#' else h for h in args['hashtags'].split()])
-    words = 'allwords anywords exactphrase nonewords hashtags'.split()
-    q += [args[k] for k in words if args[k]]
-
-    # language
-    if args.get('lang'):
-        q += ['lang:' + args['lang']]
-
-    # people
-    #TODO strip off @ if it exists in query for from and to users
-    if args.get('fromusers'):
-        args['fromusers'] = ' OR '.join(['from:' + u for u in args['fromusers'].split()])
-
-    if args.get('tousers'):
-        args['tousers'] = ' OR '.join(['to:' + u for u in args['tousers'].split()])
-
-    if args.get('mentionusers'):
-        args['mentionusers'] = ' OR '.join(
-                ['@' + u if u[0] != '@' else u for u in args['mentionusers'].split()])
-    people = 'fromusers tousers mentionusers'.split()
-    q += [args[k] for k in people if args[k]]
-
-    # places
-    if args.get('place'):
-        q += ['near:' + args['place']]
-
-    # dates
-    # TODO default date from now backwards if argument not given
-    q += ['since:' + args['since'], 'until:' + args['until']]
-
-    if args.get('positive'):
-        q += [':)']
-
-    if args.get('negative'):
-        q += [':(']
-
-    if args.get('retweets'):
-        q += ['include:retweets']
-
-    payload = {'q': ' '.join(q)}
-    return payload
 
 
 def check_payload(args):
