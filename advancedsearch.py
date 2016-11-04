@@ -327,13 +327,6 @@ def sink_stdout():
         #print(json.dumps(tweet))
 
 
-def verify_date_format(s):
-    try:
-        datetime.datetime.strptime(s, '%Y-%m-%d')
-    except ValueError:
-        return False
-    return True
-
 def read_config(fin):
     """Reads search parameters from file fin"""
     APP_DATA = os.path.dirname(os.path.abspath(__file__))
@@ -347,22 +340,16 @@ def read_config(fin):
     return res
 
 
-
-
 def check_payload(args):
-    #TODO: check what are optional and mandatory arguments
-    if not(args.get('allwords')    or
-           args.get('exactphrase') or
-           args.get('anywords')    or
-           args.get('nonewords')   or
-           args.get('hashtags')):
-        sys.stderr.write('No search terms.\n')
-        exit(1)
-
-    if args['since'] and not verify_date_format(args.get('since')) or \
-            args['until'] and not verify_date_format(args.get('until')):
-        sys.stderr.write('WRONG day format. --since or --until in yyyy-mm-dd format.\n')
-        exit(1)
+    try:
+        since = args.get('since')
+        if since:
+            datetime.datetime.strptime(since, '%Y-%m-%d')
+        until = args.get('until')
+        if until:
+            datetime.datetime.strptime(since, '%Y-%m-%d')
+    except ValueError:
+        raise('ERROR. Day should be in yyyy-mm-dd format.\n')
 
 
 def read_payload(args):
