@@ -100,12 +100,10 @@ class AdvancedSearchWrapper():
             yield(tweet)
 
     def daily_search(self, payload):
-        sys.stderr.write('Running daily_search.\n')
         for prev_day, next_day in self.gen_days(
                 payload.get('since'), payload.get('until')):
             payload['since'] = prev_day
             payload['until'] = next_day
-            sys.stderr.write('since:{} until:{}\n'.format(prev_day, next_day))
             for tweet in self.search(payload):
                 yield(tweet)
 
@@ -113,13 +111,10 @@ class AdvancedSearchWrapper():
     def search(self, payload):
         self.url = 'https://twitter.com/search'
         payload = gen_payload(payload)
-        sys.stderr.write('{}\n'.format(json.dumps(payload)))
         r = self.session.get(self.url, params=payload)
         self.url = 'https://twitter.com/i/search/timeline'
         while True:
-            #sys.stderr.write('{} {}\n'.format(time.asctime(), r.url))
             html_result, min_position = self.parse_response(r)
-            sys.stderr.write('{} {}\n'.format(time.asctime(), min_position))
             tweets = self.parse_result(html_result)
             if len(tweets) == 0: break
             for tweet in tweets:
