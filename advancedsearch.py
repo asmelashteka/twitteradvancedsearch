@@ -30,9 +30,9 @@ class AdvancedSearch():
         self.TWEET_IDS = Queue()
         self.TWEETS = Queue()
 
-    def run(self, payload):
+    def run(self, payload, daily):
         sink = sink_stdout()
-        t1 = Thread(target=self.gen_tweet_ids, args=(payload,))
+        t1 = Thread(target=self.gen_tweet_ids, args=(payload, daily))
         t2 = Thread(target=self.gen_raw_tweets, args=(sink,))
         t1.start()
         t2.start()
@@ -44,8 +44,7 @@ class AdvancedSearch():
 
     def gen_tweet_ids(self, payload):
         """A thread that generates tweet ids for a historic search"""
-        s = AdvancedSearchWrapper()
-        for tweet in s.run(payload):
+        for tweet in AdvancedSearchWrapper().run(payload):
             self.TWEET_IDS.put(tweet['tweet_id'])
         self.TWEET_IDS.put(AdvancedSearch._sentinel)
 
@@ -81,19 +80,40 @@ class AdvancedSearchWrapper():
     """
     TWEET = namedtuple('TWEET', 'created_at, user_id, tweet_id, tweet_text, screen_name, user_name, rt_cnt, fv_cnt')
 
-    def __init__(self, url='https://twitter.com/search'):
-        self.url = url
+    def __init__(self):
         self.session = self.set_session()
         self.status = 'run'
 
     def set_session(self):
-        user_agents = ['Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2227.0 Safari/537.36',
-                       'Opera/9.80 (X11; Linux x86_64; U; fr) Presto/2.9.168 Version/11.50']
+        #user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2227.0 Safari/537.36'
+        user_agent = 'Opera/9.80 (X11; Linux x86_64; U; fr) Presto/2.9.168 Version/11.50'
         s = requests.Session()
-        s.headers.update({'User-Agent' : random.choice(user_agents)})
+        s.headers.update({'User-Agent' : user_agent})
         return s
 
-    def run(self, payload):
+    def run(self, payload, daily):
+        if daily:
+            stream = self.daily_search(payload)
+        else:
+            stream = self.search(payload)
+        for tweet in stream:
+            yield(tweet)
+
+    def daily_search(self, payload):
+        sys.stderr.write('Running daily_search.\n')
+        for prev_day, next_day in self.gen_days(
+                payload.get('since'), payload.get('until')):
+            payload['since'] = prev_day
+            payload['until'] = next_day
+            sys.stderr.write('since:{} until:{}\n'.format(prev_day, next_day))
+            for tweet in self.search(payload):
+                yield(tweet)
+
+
+    def search(self, payload):
+        self.url = 'https://twitter.com/search'
+        payload = gen_payload(payload)
+        sys.stderr.write('{}\n'.format(json.dumps(payload)))
         r = self.session.get(self.url, params=payload)
         self.url = 'https://twitter.com/i/search/timeline'
         while True:
@@ -104,11 +124,15 @@ class AdvancedSearchWrapper():
             if len(tweets) == 0: break
             for tweet in tweets:
                 yield (tweet._asdict())
-            time.sleep(random.random())
-            payload['max_position'] = min_position
+            #time.sleep(random.random())
             if self.status == 'stop':
                 break
+            if not min_position:
+                break
+            payload['max_position'] = min_position
             r = self.session.get(self.url, params=payload)
+
+
 
     def stop(self):
         self.status = 'stop'
@@ -123,12 +147,6 @@ class AdvancedSearchWrapper():
             html_result = r.text
             min_position = self.get_min_position(html_result)
             max_position = self.get_max_position(html_result)
-
-            sys.stderr.write('-----------\n')
-            sys.stderr.write('{}\n'.format(min_position))
-            sys.stderr.write('{}\n'.format(max_position))
-            sys.stderr.write('-----------\n')
-
         elif 'json' in r_type: # subsequent calls
             j = json.loads(r.text)
             html_result = j.get('items_html')
@@ -184,12 +202,19 @@ class AdvancedSearchWrapper():
             tweets.append(tweet)
         return tweets
 
-    def gen_seq_days(self, since, until, nofdays=1):
+    def gen_days(self, since, until, nofdays=1):
         """Good idea for broad topics that generate lots of tweets
-        This helps do it daily instead of the entire duration
+        This helps do it daily instead of the entire duration.
+        Also enables retrieving from past to recent chronologically.
         """
+        if not since:
+            since = '2006-03-21' # First tweet ever
+        if not until:
+            until = str(datetime.date.today())
+
         since = datetime.datetime.strptime(since, '%Y-%m-%d')
         until = datetime.datetime.strptime(until, '%Y-%m-%d')
+
         while since < until:
             prev_day = datetime.datetime.strftime(since, '%Y-%m-%d')
             since += datetime.timedelta(days=nofdays)
@@ -250,20 +275,6 @@ def gen_payload(args):
     to:t1 OR to:t2 @m1 OR @m2 near:"Hanover, Lower Saxony" within:15mi
     since:2016-09-25 until:2016-09-30 :) :( ? include:retweets
     """
-
-    if not(args.get('allwords')    or \
-           args.get('exactphrase') or \
-           args.get('anywords')    or \
-           args.get('nonewords')   or \
-           args.get('hashtags')):
-        sys.stderr.write('No search terms.\n')
-        exit(1)
-
-    if not verify_date_format(args.get('since')) or \
-            not verify_date_format(args.get('until')):
-        sys.stderr.write('provide --since or --until in yyyy-mm-dd format\n')
-        exit(1)
-
     q = []
     # words
     if args.get('allwords'):
@@ -323,12 +334,30 @@ def gen_payload(args):
     return payload
 
 
+def check_payload(args):
+    #TODO: check what are optional and mandatory arguments
+    if not(args.get('allwords')    or
+           args.get('exactphrase') or
+           args.get('anywords')    or
+           args.get('nonewords')   or
+           args.get('hashtags')):
+        sys.stderr.write('No search terms.\n')
+        exit(1)
+
+    if args['since'] and not verify_date_format(args.get('since')) or \
+            args['until'] and not verify_date_format(args.get('until')):
+        sys.stderr.write('WRONG day format. --since or --until in yyyy-mm-dd format.\n')
+        exit(1)
+
+
 def read_payload(args):
     # script input mode: from command line vs file
     if args.mode == 'cmd':
-        payload = gen_payload(vars(args))
+        payload = vars(args)
     else:
-        payload = gen_payload(read_config(args.fin))
+        payload = read_config(args.fin)
+
+    check_payload(payload)
     return payload
 
 
@@ -340,20 +369,29 @@ def read_args():
 
     parser.add_argument('-all',  '--allwords', help='all of these words')
     parser.add_argument('-any',  '--anywords', help='any of these words')
+    parser.add_argument('-d', '--daily', help='daily search from past to recent.',
+            action='store_true')
     parser.add_argument('-exact','--exactphrase', help='this exact phrase')
     parser.add_argument('-fusers',  '--fromusers', help='from these accounts')
-    parser.add_argument('-f', '--fin', help='input file if mode is file', default='search.txt')
+    parser.add_argument('-f', '--fin', help='input file if mode is file',
+            default='search.txt')
     parser.add_argument('-ht', '--hashtags', help='these hashtags')
-    parser.add_argument('-k', '--key', help='Twitter key entry to credentials.txt', default=1)
+    parser.add_argument('-k', '--key', help='Twitter key in credentials.txt',
+            default=1)
     parser.add_argument('-l',  '--lang', help='written in language')
     parser.add_argument('-musers',  '--mentionusers', help='mentioning these accounts')
-    parser.add_argument('-m', '--mode', help='input from cmd or file', choices=['file','cmd'], default='cmd')
-    parser.add_argument('-neg',  '--negative', help='select negative :(', choices=[True, False])
+    parser.add_argument('-m', '--mode', help='input from cmd or file',
+            choices=['file','cmd'], default='cmd')
+    parser.add_argument('-neg',  '--negative', help='select negative :(',
+            choices=[True, False])
     parser.add_argument('-none', '--nonewords', help='none of these words')
     parser.add_argument('-p',  '--place', help='near this place')
-    parser.add_argument('-pos',  '--positive', help='select positive :)', choices=[True, False])
-    parser.add_argument('-r',  '--raw', help='download raw tweet', action='store_true')
-    parser.add_argument('-rt', '--retweets', help='include retweets', choices=[True, False])
+    parser.add_argument('-pos',  '--positive', help='select positive :)',
+            choices=[True, False])
+    parser.add_argument('-r',  '--raw', help='download raw tweet',
+            action='store_true')
+    parser.add_argument('-rt', '--retweets', help='include retweets',
+            choices=[True, False])
     parser.add_argument('-s',  '--since', help='since date yyyy-mm-dd')
     parser.add_argument('-tusers',  '--tousers', help='to these accounts')
     parser.add_argument('-u',  '--until', help='until date yyyy-mm-dd')
@@ -366,10 +404,12 @@ def main():
     args = read_args()
     payload = read_payload(args)
 
-    if args.raw: stream = AdvancedSearch(args.key)
-    else: stream = AdvancedSearchWrapper()
+    if args.raw:
+        stream = AdvancedSearch(args.key)
+    else:
+        stream = AdvancedSearchWrapper()
 
-    for tweet in stream.run(payload):
+    for tweet in stream.run(payload, args.daily):
         print(json.dumps(tweet))
 
 
