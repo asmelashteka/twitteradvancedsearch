@@ -88,8 +88,7 @@ class AdvancedSearchWrapper():
                 'screen_name',
                 'user_name',
                 'retweet_count',
-                'favorite_count'
-                )
+                'favorite_count')
             )
 
     def __init__(self):
@@ -195,7 +194,6 @@ class AdvancedSearchWrapper():
             q.append('near:' + args['place'])
 
         # dates
-        # TODO default date from now backwards if argument not given
         if args.get('since'):
             q.append('since:' + args['since'])
         if args.get('until'):
@@ -271,12 +269,22 @@ class AdvancedSearchWrapper():
             screen_name = e.get('data-screen-name', '')
             user_name   = e.get('data-name', '')
             tweet_text  = e.find('p').text
-            created_at  = e.find('span', {'class':'_timestamp'}).get('data-time','')
+            created_at  = e.find('span', {'class':'_timestamp'}).get(
+                    'data-time','')
             created_at  = str(datetime.datetime.fromtimestamp(int(created_at)))
-            rt_cnt = self.extract_val(e, cls='ProfileTweet-action--retweet')
-            fv_cnt = self.extract_val(e, cls='ProfileTweet-action--favorite')
-            tweet = AdvancedSearchWrapper.TWEET(created_at, user_id, tweet_id,
-                    tweet_text, screen_name, user_name, rt_cnt, fv_cnt)
+            retweet_count = self.extract_val(e,
+                    cls='ProfileTweet-action--retweet')
+            favorite_count = self.extract_val(e,
+                    cls='ProfileTweet-action--favorite')
+            tweet = AdvancedSearchWrapper.TWEET(
+                    created_at,
+                    user_id,
+                    tweet_id,
+                    tweet_text,
+                    screen_name,
+                    user_name,
+                    retweet_count,
+                    favorite_count)
             tweets.append(tweet)
         return tweets
 
