@@ -78,14 +78,25 @@ class AdvancedSearchWrapper():
     https://dev.twitter.com/rest/reference/get/statuses/lookup
     to crawl past tweets starting right from the very first tweet.
     """
-    TWEET = namedtuple('TWEET', 'created_at, user_id, tweet_id, tweet_text, screen_name, user_name, rt_cnt, fv_cnt')
+
+    TWEET = namedtuple(
+            'TWEET',(
+                'created_at',
+                'user_id',
+                'tweet_id',
+                'tweet_text',
+                'screen_name',
+                'user_name',
+                'retweet_count',
+                'favorite_count'
+                )
+            )
 
     def __init__(self):
         self.session = self.set_session()
         self.status = 'run'
 
     def set_session(self):
-        #user_agent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2227.0 Safari/537.36'
         user_agent = 'Opera/9.80 (X11; Linux x86_64; U; fr) Presto/2.9.168 Version/11.50'
         s = requests.Session()
         s.headers.update({'User-Agent' : user_agent})
