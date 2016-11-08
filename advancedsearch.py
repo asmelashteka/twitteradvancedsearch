@@ -42,9 +42,9 @@ class AdvancedSearch():
     def stop(self):
         self.TWEET_IDS.put(AdvancedSearch._sentinel)
 
-    def gen_tweet_ids(self, payload):
+    def gen_tweet_ids(self, payload, daily):
         """A thread that generates tweet ids for a historic search"""
-        for tweet in AdvancedSearchWrapper().run(payload):
+        for tweet in AdvancedSearchWrapper().run(payload, daily):
             self.TWEET_IDS.put(tweet['tweet_id'])
         self.TWEET_IDS.put(AdvancedSearch._sentinel)
 
@@ -96,9 +96,13 @@ class AdvancedSearchWrapper():
         self.status = 'run'
 
     def set_session(self):
-        user_agent = 'Opera/9.80 (X11; Linux x86_64; U; fr) Presto/2.9.168 Version/11.50'
+        user_agents = ['Opera/9.80 (X11; Linux x86_64; U; fr) Presto/2.9.168 Version/11.50',
+                'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)',
+                'Mozilla/5.0 (X11; Linux i686; rv:10.0) Gecko/20100101 Firefox/10.0',
+                'Mozilla/5.0 (X11; Linux x86_64; rv:10.0) Gecko/20100101 Firefox/10.0',
+                'Mozilla/5.0 (X11; Linux i686 on x86_64; rv:10.0) Gecko/20100101 Firefox/10.0']
         s = requests.Session()
-        s.headers.update({'User-Agent' : user_agent})
+        s.headers.update({'User-Agent' : random.choice(user_agents)})
         return s
 
     def run(self, payload, daily=False):
@@ -131,7 +135,7 @@ class AdvancedSearchWrapper():
             if len(tweets) == 0: break
             for tweet in tweets:
                 yield (tweet._asdict())
-            #time.sleep(random.random())
+            time.sleep(random.random())
             if self.status == 'stop':
                 break
             if not min_position:
@@ -387,7 +391,7 @@ def read_args():
             default='search.txt')
     parser.add_argument('-ht', '--hashtags', help='these hashtags')
     parser.add_argument('-k', '--key', help='Twitter key in credentials.txt',
-            default=1)
+            default=1, type=int)
     parser.add_argument('-l',  '--lang', help='written in language')
     parser.add_argument('-musers',  '--mentionusers', help='mentioning these accounts')
     parser.add_argument('-m', '--mode', help='input from cmd or file',
