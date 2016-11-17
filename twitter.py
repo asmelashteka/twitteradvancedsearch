@@ -2,7 +2,7 @@ import sys
 import json
 import requests
 from requests_oauthlib import OAuth1
-import credentials
+#import credentials
 import time
 import random
 
@@ -11,8 +11,8 @@ PROXIES = {'http': 'http://teka:130.75.87.215:5555',
 
 class REST_API(object):
     """Twitter REST API."""
-    def __init__(self, key, end_point):
-        self.key       = key
+    def __init__(self, keys, end_point):
+        self.keys      = keys
         self.end_point = end_point
         self.url       = self.set_url()
         self.session   = self.set_session()
@@ -22,9 +22,9 @@ class REST_API(object):
             return 'https://api.twitter.com/1.1/statuses/lookup.json'
 
     def set_session(self):
-        keys = credentials.get_keys(self.key)
+        #keys = credentials.get_keys(self.key)
         s = requests.Session()
-        s.auth = OAuth1(**keys)
+        s.auth = OAuth1(**self.keys)
         return s
 
     def get(self, ids):

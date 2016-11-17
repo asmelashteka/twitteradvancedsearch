@@ -3,8 +3,9 @@ import os
 import json
 import time
 import random
-import argparse
 import datetime
+import argparse
+import configparser
 from collections import namedtuple
 from queue import Queue
 from threading import Thread
@@ -25,8 +26,8 @@ class AdvancedSearch():
     """
     _sentinel   = object()
 
-    def __init__(self, key=1):
-        self.twitter_key = key
+    def __init__(self, keys):
+        self.keys = keys
         self.TWEET_IDS = Queue()
         self.TWEETS = Queue()
 
@@ -62,7 +63,7 @@ class AdvancedSearch():
 
     def gen_raw_tweets(self, target):
         """A thread that given tweet id generates raw json tweets"""
-        api = REST_API(key=self.twitter_key, end_point='status_lookup')
+        api = REST_API(keys=self.keys, end_point='status_lookup')
         for tweet_ids in self.gen_chunks():
             if tweet_ids == []: break
             tweet_ids = ','.join(tweet_ids)
@@ -374,6 +375,20 @@ def read_payload(args):
     check_payload(payload)
     return payload
 
+def read_config(key='default', fin='credentials.cfg'):
+    config = configparser.ConfigParser()
+    config.read(fin)
+    mapping = {'consumer_key'        : 'client_key',
+               'consumer_secret'     : 'client_secret',
+               'access_token'        : 'resource_owner_key',
+               'access_token_secret' : 'resource_owner_secret'}
+    credentials = {}
+    for token in config[key]:
+        value = config[key].get(token)
+        _key = mapping.get('_'.join(token.split()))
+        credentials[_key] = value
+    return credentials
+
 
 def read_args():
     """ expose functionalities in https://twitter.com/search-advanced
@@ -391,7 +406,7 @@ def read_args():
             default='search.txt')
     parser.add_argument('-ht', '--hashtags', help='these hashtags')
     parser.add_argument('-k', '--key', help='Twitter key in credentials.txt',
-            default=1, type=int)
+            default='default')
     parser.add_argument('-l',  '--lang', help='written in language')
     parser.add_argument('-musers',  '--mentionusers', help='mentioning these accounts')
     parser.add_argument('-m', '--mode', help='input from cmd or file',
@@ -414,12 +429,14 @@ def read_args():
     return args
 
 
+
 def main():
     args = read_args()
     payload = read_payload(args)
+    keys = read_config(args.key)
 
     if args.raw:
-        stream = AdvancedSearch(args.key)
+        stream = AdvancedSearch(keys)
     else:
         stream = AdvancedSearchWrapper()
 
