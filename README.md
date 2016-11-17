@@ -23,13 +23,14 @@ retweet_count, and favorite_count`.
 
 ## Retrieving raw json tweets
 
-In order to obtain the complete raw json tweets from the Twitter REST API, add
-the flag `--raw` or `-r` for short. Note that this operation requires Twitter
-API keys. Please modify `credentials.py` with your appropriate keys, [Twitter
-oauth overview](https://dev.twitter.com/oauth/overview).
+In order to obtain the complete raw json tweets from the Twitter REST
+API, add the flag `--raw` or `-r` for short. Note that this operation
+requires Twitter API keys. Please create a file `credentials.txt` with
+your keys and provide it to the script via the `-k` option
+([Twitter oauth overview](https://dev.twitter.com/oauth/overview)).
 
 ```shell
-$ python advancedsearch.py -ht "charlie hebdo" -s 2015-01-06 -u 2016-02-06 --raw
+$ python advancedsearch.py -k credentials.txt -ht "charlie hebdo" -s 2015-01-06 -u 2016-02-06 --raw
 ```
 
 ## Reading parameters from file
