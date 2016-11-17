@@ -26,13 +26,22 @@ retweet_count, and favorite_count`.
 In order to obtain the complete raw json tweets from the Twitter REST API, you
 need Twitter API credentials. Check [Twitter oauth
 overview](https://dev.twitter.com/oauth/overview) for details. After obtaining
-credentials, modify the `credentials.py` by substituting the corresponding
+credentials, modify the `credentials.cfg` by substituting the corresponding
 fields. You can specify multiple credentials. To use a specific credential,
-run the script with the flag `--raw` or `-r` for short and the corresponding
-dictionary key in `credentials.py`.
+run the script with the flag `--raw` or `-r` for short. This picks up the
+`default` credentials in `credentials.cfg`.
 
 ```shell
-$ python advancedsearch.py -ht "charlie hebdo" -s 2015-01-06 -u 2016-02-06 --raw -k 0
+$ python advancedsearch.py -ht "charlie hebdo" -s 2015-01-06 -u 2016-02-06 --raw
+```
+
+If you want to use a particular credential, then you specify the corresponding
+name with the `--key` flag or `k` for short. E.g., to use credentials under
+`another` in `credentials.cfg`.
+
+
+```shell
+$ python advancedsearch.py -ht "charlie hebdo" -s 2015-01-06 -u 2016-02-06 --raw -k another
 ```
 
 ## Reading parameters from file
@@ -56,7 +65,7 @@ when calling the script from the command line.
 $ python advancedsearch.py -any \$AAPL -s 2016-07-01 -u 2016-08-02
 ```
 
-## Retrieving in Chronological order
+## Retrieving in chronological order
 
 If you want to retrieve tweets in chronological order from past to recent.
 Supply the `--daily` flag.
