@@ -345,10 +345,10 @@ def read_config(fin):
     res = {}
     with open(os.path.join(APP_DATA, fin), 'rb') as f:
         for line in f:
-            line = line.decode('utf-8').strip()
+            line = line.decode('utf-8').lower().strip()
             if line == '' or line[0] == '#' or line[-1] == '=': continue
             key, val = line.split('=')
-            res[key.strip().lower()] = val.strip()
+            res[key.strip()] = val.strip()
     return res
 
 

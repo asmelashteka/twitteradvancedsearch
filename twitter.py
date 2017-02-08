@@ -20,6 +20,12 @@ class REST_API(object):
     def set_url(self):
         if self.end_point == 'status_lookup':
             return 'https://api.twitter.com/1.1/statuses/lookup.json'
+        elif self.end_point == 'followers_ids':
+            return 'https://api.twitter.com/1.1/followers/ids.json'
+        elif self.endpoint == 'friends_ids':
+            return 'https://api.twitter.com/1.1/friends/ids.json'
+        elif self.endpoint == 'status_retweets_ids':
+            return 'https://api.twitter.com/1.1/statuses/retweets/:id.json'
 
     def set_session(self):
         keys = credentials.get_keys(self.key)
