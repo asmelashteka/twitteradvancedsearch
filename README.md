@@ -59,7 +59,7 @@ If you want to retrieve tweets in chronological order from past to recent.
 Supply the `--daily` flag.
 
 ```shell
-$ advancedsearch.py -ht kdd2016 -s 2016-01-02 -u 2016-11-01 --daily
+$ python advancedsearch.py -ht kdd2016 -s 2016-08-10 -u 2016-08-20 --daily
 ```
 
 ## More options (help)
