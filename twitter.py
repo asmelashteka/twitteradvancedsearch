@@ -2,7 +2,6 @@ import sys
 import json
 import requests
 from requests_oauthlib import OAuth1
-import credentials
 import time
 import random
 
@@ -24,13 +23,12 @@ class REST_API(object):
             return 'https://api.twitter.com/1.1/followers/ids.json'
         elif self.endpoint == 'friends_ids':
             return 'https://api.twitter.com/1.1/friends/ids.json'
-        elif self.endpoint == 'status_retweets_ids':
+        elif self.endpoint == 'status_retweets':
             return 'https://api.twitter.com/1.1/statuses/retweets/:id.json'
 
     def set_session(self):
-        keys = credentials.get_keys(self.key)
         s = requests.Session()
-        s.auth = OAuth1(**keys)
+        s.auth = OAuth1(**self.key)
         return s
 
     def get(self, ids):

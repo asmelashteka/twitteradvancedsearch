@@ -8,12 +8,15 @@ import datetime
 from collections import namedtuple
 from queue import Queue
 from threading import Thread
+import pytz
 
 import requests
 from bs4 import BeautifulSoup
+import configparser
 
 from twitter import REST_API
 
+TWITTER_DATE_FORMAT = '%a %b %d %H:%M:%S %z %Y'
 
 class AdvancedSearch():
     """This class provides access to historic tweets.
@@ -25,15 +28,14 @@ class AdvancedSearch():
     """
     _sentinel   = object()
 
-    def __init__(self, key=1):
+    def __init__(self, key):
         self.twitter_key = key
         self.TWEET_IDS = Queue()
         self.TWEETS = Queue()
 
     def run(self, payload, daily=False):
-        sink = sink_stdout()
         t1 = Thread(target=self.gen_tweet_ids, args=(payload, daily))
-        t2 = Thread(target=self.gen_raw_tweets, args=(sink,))
+        t2 = Thread(target=self.gen_raw_tweets)
         t1.start()
         t2.start()
         while True:
@@ -60,14 +62,13 @@ class AdvancedSearch():
                 yield(ids)
                 ids = []
 
-    def gen_raw_tweets(self, target):
+    def gen_raw_tweets(self):
         """A thread that given tweet id generates raw json tweets"""
         api = REST_API(key=self.twitter_key, end_point='status_lookup')
         for tweet_ids in self.gen_chunks():
             if tweet_ids == []: break
             tweet_ids = ','.join(tweet_ids)
             for tweet in api.post(ids=tweet_ids):
-                target.send(tweet)
                 self.TWEETS.put(tweet)
 
 
@@ -275,7 +276,8 @@ class AdvancedSearchWrapper():
             tweet_text  = e.find('p').text
             created_at  = e.find('span', {'class':'_timestamp'}).get(
                     'data-time','')
-            created_at  = str(datetime.datetime.fromtimestamp(int(created_at)))
+            created_at = datetime.datetime.fromtimestamp(int(created_at), pytz.UTC)
+            created_at = created_at.strftime(TWITTER_DATE_FORMAT)
             retweet_count = self.extract_val(e,
                     cls='ProfileTweet-action--retweet')
             favorite_count = self.extract_val(e,
@@ -324,19 +326,21 @@ class AdvancedSearchWrapper():
             {'class': 'IconTextContainer'}),'text', '').strip()
         return count
 
-def coroutine(func):
-    """Decorator: primes `func` by advancing to first `yield`"""
-    def start(*args, **kwargs):
-        cr = func(*args, **kwargs)
-        next(cr)
-        return cr
-    return start
 
-@coroutine
-def sink_stdout():
-    while True:
-        tweet = (yield)
-        #print(json.dumps(tweet))
+def name2key(key='default', fin='credentials.cfg'):
+    """convert name to twitter keys from credentials file"""
+    config = configparser.ConfigParser()
+    config.read(fin)
+    mapping = {'consumer_key'        : 'client_key',
+               'consumer_secret'     : 'client_secret',
+               'access_token'        : 'resource_owner_key',
+               'access_token_secret' : 'resource_owner_secret'}
+    credentials = {}
+    for token in config[key]:
+        value = config[key].get(token)
+        _key = mapping.get('_'.join(token.split()))
+        credentials[_key] = value
+    return credentials
 
 
 def read_config(fin):
@@ -379,7 +383,7 @@ def read_args():
     """ expose functionalities in https://twitter.com/search-advanced
     as much as possible
     """
-    parser = argparse.ArgumentParser(description='Twitter search advanced.')
+    parser = argparse.ArgumentParser(description='Twitter advanced search.')
 
     parser.add_argument('-all',  '--allwords', help='all of these words')
     parser.add_argument('-any',  '--anywords', help='any of these words')
@@ -419,7 +423,8 @@ def main():
     payload = read_payload(args)
 
     if args.raw:
-        stream = AdvancedSearch(args.key)
+        twitter_key = name2key(args.key)
+        stream = AdvancedSearch(twitter_key)
     else:
         stream = AdvancedSearchWrapper()
 

@@ -1,7 +1,7 @@
 # Twitter Advanced Search
 
-This tool is a wrapper around [Twitter Advanced Search]
-(https://twitter.com/search-advanced).
+This tool is a wrapper around [Twitter Advanced
+Search](https://twitter.com/search-advanced).
 
 ## Usage Examples:
 
@@ -73,10 +73,10 @@ $ python advancedsearch.py -h
 
 ## Search Operators
 
-The following documentation on operators in Advanced Search is taken from the
-page [Search Operators](https://twitter.com/search-home#) which is buried
-under the link `operators`. Read more about [Using advanced search]
-(https://support.twitter.com/articles/71577).
+The following documentation on operators in Advanced Search is taken
+from the page [Search Operators](https://twitter.com/search-home#)
+which is buried under the link `operators`. Read more about [Using
+advanced search](https://support.twitter.com/articles/71577).
 
 | Operator         |  Finds tweets...    
 |------------------|---------------------
