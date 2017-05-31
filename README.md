@@ -17,19 +17,31 @@ from 2016-07-01 to 2016-08-22.
 $ python advancedsearch.py -ht "charlie hebdo" -s 2015-01-06 -u 2016-02-06
 ```
 
-Note that thre resulting output is a custom json format containing the fields:
+Note that the resulting output is a custom json format containing the fields:
 ` created_at, user_id, tweet_id, tweet_text, screen_name, user_name,
 retweet_count, and favorite_count`.
 
 ## Retrieving raw json tweets
 
-In order to obtain the complete raw json tweets from the Twitter REST API, add
-the flag `--raw` or `-r` for short. Note that this operation requires Twitter
-API keys. Please modify `credentials.py` with your appropriate keys, [Twitter
-oauth overview](https://dev.twitter.com/oauth/overview).
+In order to obtain the complete raw json tweets from the Twitter REST API, you
+need Twitter API credentials. Check [Twitter oauth
+overview](https://dev.twitter.com/oauth/overview) for details. After obtaining
+credentials, modify the `credentials.cfg` by substituting the corresponding
+fields. You can specify multiple credentials. To use a specific credential,
+run the script with the flag `--raw` or `-r` for short. This picks up the
+`default` credentials in `credentials.cfg`.
 
 ```shell
 $ python advancedsearch.py -ht "charlie hebdo" -s 2015-01-06 -u 2016-02-06 --raw
+```
+
+If you want to use a particular credential, then you specify the corresponding
+name with the `--key` flag or `k` for short. E.g., to use credentials under
+`another` in `credentials.cfg`.
+
+
+```shell
+$ python advancedsearch.py -ht "charlie hebdo" -s 2015-01-06 -u 2016-02-06 --raw -k another
 ```
 
 ## Reading parameters from file
@@ -53,7 +65,7 @@ when calling the script from the command line.
 $ python advancedsearch.py -any \$AAPL -s 2016-07-01 -u 2016-08-02
 ```
 
-## Retrieving in Chronological order
+## Retrieving in chronological order
 
 If you want to retrieve tweets in chronological order from past to recent.
 Supply the `--daily` flag.
