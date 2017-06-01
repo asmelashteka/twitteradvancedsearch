@@ -13,7 +13,6 @@ import pytz
 
 import requests
 from bs4 import BeautifulSoup
-import configparser
 
 from twitter import REST_API
 
@@ -91,10 +90,12 @@ class AdvancedSearchWrapper():
                 'user_id',
                 'tweet_id',
                 'tweet_text',
+                'lang',
                 'screen_name',
                 'user_name',
                 'retweet_count',
-                'favorite_count')
+                'favorite_count',
+                'hashtag')
             )
 
     def __init__(self):
@@ -280,7 +281,11 @@ class AdvancedSearchWrapper():
             tweet_id    = e.get('data-tweet-id', '')
             screen_name = e.get('data-screen-name', '')
             user_name   = e.get('data-name', '')
-            tweet_text  = e.find('p').text
+            tweet_text  = e.find('p', {'class': 'tweet-text'})
+            lang        = tweet_text.get('lang', 'NONE')
+            hashtag     = tweet_text.findAll('a', {'class': 'twitter-hashtag'})
+            hashtag     = ' '.join(h.text for h in hashtag)
+            tweet_text  = tweet_text.text
             created_at  = e.find('span', {'class':'_timestamp'}).get(
                     'data-time','')
             created_at = datetime.datetime.fromtimestamp(int(created_at), pytz.UTC)
@@ -294,10 +299,12 @@ class AdvancedSearchWrapper():
                     user_id,
                     tweet_id,
                     tweet_text,
+                    lang,
                     screen_name,
                     user_name,
                     retweet_count,
-                    favorite_count)
+                    favorite_count,
+                    hashtag)
             tweets.append(tweet)
         return tweets
 
