@@ -27,7 +27,7 @@ class AdvancedSearch():
     (ii) Twitter statuses look-up REST API,
     https://dev.twitter.com/rest/reference/get/statuses/lookup
     """
-    _sentinel   = object()
+    _sentinel = object()
 
     def __init__(self, keys):
         self.keys = keys
@@ -40,10 +40,13 @@ class AdvancedSearch():
         t1.start()
         t2.start()
         while True:
-            yield self.TWEETS.get()
+            tweet = self.TWEETS.get()
+            if tweet is AdvancedSearch._sentinel:
+                break
+            yield(tweet)
 
     def stop(self):
-        self.TWEET_IDS.put(AdvancedSearch._sentinel)
+        self.TWEETS.put(AdvancedSearch._sentinel)
 
     def gen_tweet_ids(self, payload, daily):
         """A thread that generates tweet ids for a historic search"""
@@ -71,6 +74,8 @@ class AdvancedSearch():
             tweet_ids = ','.join(tweet_ids)
             for tweet in api.post(ids=tweet_ids):
                 self.TWEETS.put(tweet)
+        self.TWEETS.put(AdvancedSearch._sentinel)
+
 
 
 class AdvancedSearchWrapper():
@@ -80,7 +85,6 @@ class AdvancedSearchWrapper():
     https://dev.twitter.com/rest/reference/get/statuses/lookup
     to crawl past tweets starting right from the very first tweet.
     """
-
     TWEET = namedtuple(
             'TWEET',(
                 'created_at',
@@ -113,14 +117,16 @@ class AdvancedSearchWrapper():
         else:
             stream = self.search(payload)
         for tweet in stream:
+            if tweet is AdvancedSearch._sentinel:
+                break
             yield(tweet)
 
     def stop(self):
         self.status = 'stop'
 
     def daily_search(self, payload):
-        for prev_day, next_day in self.gen_days(
-                payload.get('since'), payload.get('until')):
+        since, until = payload.get('since'), payload.get('until')
+        for prev_day, next_day in self.gen_days(since, until):
             payload['since'] = prev_day
             payload['until'] = next_day
             for tweet in self.search(payload):
@@ -328,7 +334,7 @@ class AdvancedSearchWrapper():
         return count
 
 
-def name2key(key='default', fin='credentials.cfg'):
+def name2keys(key='default', fin='credentials.cfg'):
     """convert name to twitter keys from credentials file"""
     config = configparser.ConfigParser()
     config.read(fin)
@@ -379,20 +385,6 @@ def read_payload(args):
     check_payload(payload)
     return payload
 
-def read_config(key='default', fin='credentials.cfg'):
-    config = configparser.ConfigParser()
-    config.read(fin)
-    mapping = {'consumer_key'        : 'client_key',
-               'consumer_secret'     : 'client_secret',
-               'access_token'        : 'resource_owner_key',
-               'access_token_secret' : 'resource_owner_secret'}
-    credentials = {}
-    for token in config[key]:
-        value = config[key].get(token)
-        _key = mapping.get('_'.join(token.split()))
-        credentials[_key] = value
-    return credentials
-
 
 def read_args():
     """ expose functionalities in https://twitter.com/search-advanced
@@ -437,11 +429,9 @@ def read_args():
 def main():
     args = read_args()
     payload = read_payload(args)
-    keys = read_config(args.key)
 
     if args.raw:
-        keys = name2key(args.key)
-        stream = AdvancedSearch(keys)
+        keys = name2keys(args.key)
         stream = AdvancedSearch(keys)
     else:
         stream = AdvancedSearchWrapper()

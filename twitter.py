@@ -4,9 +4,6 @@ import requests
 from requests_oauthlib import OAuth1
 import time
 
-PROXIES = {'http': 'http://teka:130.75.87.215:5555',
-           'https': 'https://teka:130.75.87.215:5555'}
-
 class REST_API(object):
     """Twitter REST API."""
     def __init__(self, keys, end_point):
