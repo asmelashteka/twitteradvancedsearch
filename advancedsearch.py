@@ -17,6 +17,7 @@ from bs4 import BeautifulSoup
 from twitter import REST_API
 
 TWITTER_DATE_FORMAT = '%a %b %d %H:%M:%S %z %Y'
+early_exit = None
 
 class AdvancedSearch():
     """This class provides access to historic tweets.
@@ -144,12 +145,12 @@ class AdvancedSearchWrapper():
             if len(tweets) == 0: break
             for tweet in tweets:
                 yield (tweet._asdict())
-            time.sleep(random.random())
             if self.status == 'stop':
                 break
             if not min_position:
                 break
             payload['max_position'] = min_position
+            time.sleep(random.random())
             r = self.session.get(self.url, params=payload)
 
     def gen_payload(self, args):
@@ -289,13 +290,13 @@ class AdvancedSearchWrapper():
             created_at  = e.find('span', {'class':'_timestamp'}).get(
                     'data-time','')
             created_at = datetime.datetime.fromtimestamp(int(created_at), pytz.UTC)
-            created_at = created_at.strftime(TWITTER_DATE_FORMAT)
+            if early_exit and created_at < early_exit: continue
             retweet_count = self.extract_val(e,
                     cls='ProfileTweet-action--retweet')
             favorite_count = self.extract_val(e,
                     cls='ProfileTweet-action--favorite')
             tweet = AdvancedSearchWrapper.TWEET(
-                    created_at,
+                    created_at.strftime(TWITTER_DATE_FORMAT),
                     user_id,
                     tweet_id,
                     tweet_text,
@@ -371,15 +372,26 @@ def read_config(fin):
 
 
 def check_payload(args):
+    """checks if date formats are good.
+    also checks for optional hour:minute in since for early exit.
+    """
+    global early_exit
     try:
         since = args.get('since')
-        if since:
+        if since and ':' in since:
+            early_exit = datetime.datetime.strptime(since, '%Y-%m-%d-%H:%M')
+            early_exit = early_exit.replace(tzinfo=pytz.UTC)
+            parts = since.split('-')
+            since = '-'.join(parts[:3])
+            args['since'] = since
+        elif since is not None:
             datetime.datetime.strptime(since, '%Y-%m-%d')
         until = args.get('until')
         if until:
-            datetime.datetime.strptime(since, '%Y-%m-%d')
+            datetime.datetime.strptime(until, '%Y-%m-%d')
     except ValueError:
         raise('ERROR. Day should be in yyyy-mm-dd format.\n')
+    return args
 
 
 def read_payload(args):
@@ -388,9 +400,7 @@ def read_payload(args):
         payload = vars(args)
     else:
         payload = read_config(args.fin)
-
-    check_payload(payload)
-    return payload
+    return check_payload(payload)
 
 
 def read_args():
