@@ -18,6 +18,7 @@ from twitter import REST_API
 
 TWITTER_DATE_FORMAT = '%a %b %d %H:%M:%S %z %Y'
 early_exit = None
+later_skip = None
 
 class AdvancedSearch():
     """This class provides access to historic tweets.
@@ -222,7 +223,7 @@ class AdvancedSearchWrapper():
         if args.get('retweets'):
             q.append('include:retweets')
 
-        payload = {'q': ' '.join(q)}
+        payload = {'q': ' '.join(q), 'f':'tweets', 'vertical':'default'}
         return payload
 
 
@@ -446,13 +447,12 @@ def read_args():
 def main():
     args = read_args()
     payload = read_payload(args)
-
     if args.raw:
         keys = name2keys(args.key)
+        print(keys)
         stream = AdvancedSearch(keys)
     else:
         stream = AdvancedSearchWrapper()
-
     for tweet in stream.run(payload, args.daily):
         print(json.dumps(tweet))
 
