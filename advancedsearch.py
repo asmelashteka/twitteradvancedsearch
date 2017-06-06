@@ -288,6 +288,11 @@ class AdvancedSearchWrapper():
         tweets = []
         s = BeautifulSoup(t, 'html.parser')
         for e in s.findAll('div', {'class' : 'original-tweet'}):
+            created_at  = e.find('span', {'class':'_timestamp'}).get(
+                    'data-time','')
+            created_at = datetime.fromtimestamp(int(created_at), pytz.UTC)
+            if STRICTLY_UNTIL and created_at > STRICTLY_UNTIL: continue
+            if STRICTLY_SINCE and created_at < STRICTLY_SINCE: continue
             user_id     = e.get('data-user-id', '')
             tweet_id    = e.get('data-tweet-id', '')
             screen_name = e.get('data-screen-name', '')
@@ -297,11 +302,6 @@ class AdvancedSearchWrapper():
             hashtag     = tweet_text.findAll('a', {'class': 'twitter-hashtag'})
             hashtag     = ' '.join(h.text for h in hashtag)
             tweet_text  = tweet_text.text
-            created_at  = e.find('span', {'class':'_timestamp'}).get(
-                    'data-time','')
-            created_at = datetime.fromtimestamp(int(created_at), pytz.UTC)
-            if STRICTLY_SINCE and created_at < STRICTLY_SINCE: continue
-            if STRICTLY_UNTIL and created_at > STRICTLY_UNTIL: continue
             retweet_count = self.extract_val(e,
                     cls='ProfileTweet-action--retweet')
             favorite_count = self.extract_val(e,

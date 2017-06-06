@@ -65,13 +65,23 @@ when calling the script from the command line.
 $ python advancedsearch.py -any \$AAPL -s 2016-07-01 -u 2016-08-02
 ```
 
-## Retrieving in chronological order
+## Breaking searches to be performed daily
 
-If you want to retrieve tweets in chronological order from past to recent.
+If you want to retrieve tweets daily in order from past to recent.
 Supply the `--daily` flag.
 
 ```shell
 $ python advancedsearch.py -ht kdd2016 -s 2016-08-10 -u 2016-08-20 --daily
+```
+
+
+## Retrieving tweets in chronological order
+
+If you want to retrieve tweets sorted in chronological order from past to recent.
+Supply the `--chronological` flag.
+
+```shell
+$ python advancedsearch.py -ht kdd2016 -s 2016-08-10 -u 2016-08-20 --chronological
 ```
 
 ## More options (help)
