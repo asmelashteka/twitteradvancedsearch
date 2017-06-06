@@ -196,14 +196,14 @@ class AdvancedSearchWrapper():
             q.append('lang:' + args['lang'])
 
         # people
-        #TODO strip off @ if it exists in query for from and to users
+        # strip off @ if it exists in query for from and to users
         if args.get('fromusers'):
-            from_users = ' OR '.join(['from:' + u
+            from_users = ' OR '.join(['from:' + u if u[0] != '@' else 'from:' + u[1:]
                 for u in args['fromusers'].split()])
             q.append(from_users)
 
         if args.get('tousers'):
-            to_users = ' OR '.join(['to:' + u
+            to_users = ' OR '.join(['to:' + u if u[0] != '@' else 'to:' + u[1:]
                 for u in args['tousers'].split()])
             q.append(to_users)
 
@@ -278,6 +278,7 @@ class AdvancedSearchWrapper():
         offset = t[idx:].find('"')
         min_position = t[idx:idx + offset]
         return min_position
+
 
     def parse_result(self, t):
         """t is a string search result
