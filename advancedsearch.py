@@ -2,14 +2,14 @@ import sys
 import os
 import json
 import time
+import pytz
 import random
-import datetime
 import argparse
 import configparser
-from collections import namedtuple
 from queue import Queue
 from threading import Thread
-import pytz
+from collections import namedtuple
+from datetime import date, datetime, timedelta
 
 import requests
 from bs4 import BeautifulSoup
@@ -17,8 +17,8 @@ from bs4 import BeautifulSoup
 from twitter import REST_API
 
 TWITTER_DATE_FORMAT = '%a %b %d %H:%M:%S %z %Y'
-early_exit = None
-later_skip = None
+STRICTLY_SINCE = None
+STRICTLY_UNTIL = None
 
 class AdvancedSearch():
     """This class provides access to historic tweets.
@@ -35,8 +35,8 @@ class AdvancedSearch():
         self.TWEET_IDS = Queue()
         self.TWEETS = Queue()
 
-    def run(self, payload, daily=False):
-        t1 = Thread(target=self.gen_tweet_ids, args=(payload, daily))
+    def run(self, payload):
+        t1 = Thread(target=self.gen_tweet_ids, args=(payload,))
         t2 = Thread(target=self.gen_raw_tweets)
         t1.start()
         t2.start()
@@ -49,9 +49,9 @@ class AdvancedSearch():
     def stop(self):
         self.TWEETS.put(AdvancedSearch._sentinel)
 
-    def gen_tweet_ids(self, payload, daily):
+    def gen_tweet_ids(self, payload):
         """A thread that generates tweet ids for a historic search"""
-        for tweet in AdvancedSearchWrapper().run(payload, daily):
+        for tweet in AdvancedSearchWrapper().run(payload,):
             self.TWEET_IDS.put(tweet['tweet_id'])
         self.TWEET_IDS.put(AdvancedSearch._sentinel)
 
@@ -78,7 +78,6 @@ class AdvancedSearch():
         self.TWEETS.put(AdvancedSearch._sentinel)
 
 
-
 class AdvancedSearchWrapper():
     """This script is a wrapper to the Twitter advanced search,
     https://twitter.com/search-advanced
@@ -97,12 +96,12 @@ class AdvancedSearchWrapper():
                 'user_name',
                 'retweet_count',
                 'favorite_count',
-                'hashtag')
-            )
+                'hashtag'))
 
     def __init__(self):
         self.session = self.set_session()
         self.status = 'run'
+        self.TWEETS = Queue()
 
     def set_session(self):
         user_agents = ['Opera/9.80 (X11; Linux x86_64; U; fr) Presto/2.9.168 Version/11.50',
@@ -114,14 +113,12 @@ class AdvancedSearchWrapper():
         s.headers.update({'User-Agent' : random.choice(user_agents)})
         return s
 
-    def run(self, payload, daily=False):
-        if daily:
+    def run(self, payload):
+        if payload.get('daily'):
             stream = self.daily_search(payload)
         else:
             stream = self.search(payload)
         for tweet in stream:
-            if tweet is AdvancedSearch._sentinel:
-                break
             yield(tweet)
 
     def stop(self):
@@ -136,16 +133,22 @@ class AdvancedSearchWrapper():
                 yield(tweet)
 
     def search(self, payload):
+        chronological = payload.get('chronological')
         self.url = 'https://twitter.com/search'
         payload = self.gen_payload(payload)
         r = self.session.get(self.url, params=payload)
         self.url = 'https://twitter.com/i/search/timeline'
+        all_tweets = []
         while True:
             html_result, min_position = self.parse_response(r)
+            if html_result.strip() == '':
+                break
             tweets = self.parse_result(html_result)
-            if len(tweets) == 0: break
-            for tweet in tweets:
-                yield (tweet._asdict())
+            # yield immediately if result is not in chrnological order
+            if not chronological:
+                for tweet in tweets: yield (tweet._asdict())
+            else:
+                all_tweets.extend(tweets)
             if self.status == 'stop':
                 break
             if not min_position:
@@ -153,6 +156,11 @@ class AdvancedSearchWrapper():
             payload['max_position'] = min_position
             time.sleep(random.random())
             r = self.session.get(self.url, params=payload)
+
+        # sorted in chronological order
+        for tweet in sorted(all_tweets,
+                key=lambda t: datetime.strptime(t.created_at, TWITTER_DATE_FORMAT)):
+            yield (tweet._asdict())
 
     def gen_payload(self, args):
         """ generate Query string
@@ -236,7 +244,6 @@ class AdvancedSearchWrapper():
         if 'html' in r_type: # first call
             html_result = r.text
             min_position = self.get_min_position(html_result)
-            max_position = self.get_max_position(html_result)
         elif 'json' in r_type: # subsequent calls
             j = json.loads(r.text)
             html_result = j.get('items_html')
@@ -290,8 +297,9 @@ class AdvancedSearchWrapper():
             tweet_text  = tweet_text.text
             created_at  = e.find('span', {'class':'_timestamp'}).get(
                     'data-time','')
-            created_at = datetime.datetime.fromtimestamp(int(created_at), pytz.UTC)
-            if early_exit and created_at < early_exit: continue
+            created_at = datetime.fromtimestamp(int(created_at), pytz.UTC)
+            if STRICTLY_SINCE and created_at < STRICTLY_SINCE: continue
+            if STRICTLY_UNTIL and created_at > STRICTLY_UNTIL: continue
             retweet_count = self.extract_val(e,
                     cls='ProfileTweet-action--retweet')
             favorite_count = self.extract_val(e,
@@ -318,15 +326,15 @@ class AdvancedSearchWrapper():
         if not since:
             since = '2006-03-21' # First tweet ever
         if not until:
-            until = str(datetime.date.today())
+            until = str(date.today())
 
-        since = datetime.datetime.strptime(since, '%Y-%m-%d')
-        until = datetime.datetime.strptime(until, '%Y-%m-%d')
+        since = datetime.strptime(since, '%Y-%m-%d')
+        until = datetime.strptime(until, '%Y-%m-%d')
 
         while since < until:
-            prev_day = datetime.datetime.strftime(since, '%Y-%m-%d')
-            since += datetime.timedelta(days=nofdays)
-            next_day = datetime.datetime.strftime(since, '%Y-%m-%d')
+            prev_day = datetime.strftime(since, '%Y-%m-%d')
+            since += timedelta(days=nofdays)
+            next_day = datetime.strftime(since, '%Y-%m-%d')
             yield (prev_day, next_day)
 
     def extract_val(self, e, cls):
@@ -372,26 +380,35 @@ def read_config(fin):
     return res
 
 
+def parse_date(date):
+    """Parses string date"""
+    if date and ':' in date:
+        strict_date = datetime.strptime(date, '%Y-%m-%d-%H:%M')
+        strict_date = strict_date.replace(tzinfo=pytz.UTC)
+        parts = date.split('-')
+        date = '-'.join(parts[:3])
+        return (date, strict_date)
+    datetime.strptime(date, '%Y-%m-%d')
+    return (date, None)
+
+
 def check_payload(args):
     """checks if date formats are good.
-    also checks for optional hour:minute in since for early exit.
+    also checks for optional hour:minute in since to exit early
+    and in until to skip later tweets.
     """
-    global early_exit
-    try:
-        since = args.get('since')
-        if since and ':' in since:
-            early_exit = datetime.datetime.strptime(since, '%Y-%m-%d-%H:%M')
-            early_exit = early_exit.replace(tzinfo=pytz.UTC)
-            parts = since.split('-')
-            since = '-'.join(parts[:3])
-            args['since'] = since
-        elif since is not None:
-            datetime.datetime.strptime(since, '%Y-%m-%d')
-        until = args.get('until')
-        if until:
-            datetime.datetime.strptime(until, '%Y-%m-%d')
-    except ValueError:
-        raise('ERROR. Day should be in yyyy-mm-dd format.\n')
+    global STRICTLY_SINCE
+    global STRICTLY_UNTIL
+    since = args.get('since')
+    if since:
+        since, STRICTLY_SINCE = parse_date(since)
+        args['since'] = since
+    until = args.get('until')
+    if until:
+        until, STRICTLY_UNTIL = parse_date(until)
+        if STRICTLY_UNTIL and STRICTLY_UNTIL.hour + STRICTLY_UNTIL.minute > 0:
+            until = str(STRICTLY_UNTIL + timedelta(days=1)).split()[0]
+        args['until'] = until
     return args
 
 
@@ -412,6 +429,8 @@ def read_args():
 
     parser.add_argument('-all',  '--allwords', help='all of these words')
     parser.add_argument('-any',  '--anywords', help='any of these words')
+    parser.add_argument('-c', '--chronological',  help='in chronological order by time',
+            action='store_true')
     parser.add_argument('-d', '--daily', help='daily search from past to recent.',
             action='store_true')
     parser.add_argument('-exact','--exactphrase', help='this exact phrase')
@@ -435,13 +454,12 @@ def read_args():
             action='store_true')
     parser.add_argument('-rt', '--retweets', help='include retweets',
             choices=[True, False])
-    parser.add_argument('-s',  '--since', help='since date yyyy-mm-dd')
+    parser.add_argument('-s',  '--since', help='since date yyyy-mm-dd[-HH:MM]')
     parser.add_argument('-tusers',  '--tousers', help='to these accounts')
-    parser.add_argument('-u',  '--until', help='until date yyyy-mm-dd')
+    parser.add_argument('-u',  '--until', help='until date yyyy-mm-dd[-HH:MM]')
 
     args = parser.parse_args()
     return args
-
 
 
 def main():
@@ -449,11 +467,11 @@ def main():
     payload = read_payload(args)
     if args.raw:
         keys = name2keys(args.key)
-        print(keys)
         stream = AdvancedSearch(keys)
     else:
         stream = AdvancedSearchWrapper()
-    for tweet in stream.run(payload, args.daily):
+    #for tweet in stream.run(payload, args.daily, args.chronological):
+    for tweet in stream.run(payload):
         print(json.dumps(tweet))
 
 
