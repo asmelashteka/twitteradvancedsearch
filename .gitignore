@@ -1,2 +1,4 @@
 credentials.cfg
 _*
+venv
+.env*

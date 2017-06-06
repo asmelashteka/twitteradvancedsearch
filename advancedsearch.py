@@ -73,7 +73,8 @@ class AdvancedSearch():
         for tweet_ids in self.gen_chunks():
             if tweet_ids == []: break
             tweet_ids = ','.join(tweet_ids)
-            for tweet in api.post(ids=tweet_ids):
+            for tweet in sorted(api.post(ids=tweet_ids),
+                key=lambda t: datetime.strptime(t['created_at'], TWITTER_DATE_FORMAT)):
                 self.TWEETS.put(tweet)
         self.TWEETS.put(AdvancedSearch._sentinel)
 
@@ -471,7 +472,6 @@ def main():
         stream = AdvancedSearch(keys)
     else:
         stream = AdvancedSearchWrapper()
-    #for tweet in stream.run(payload, args.daily, args.chronological):
     for tweet in stream.run(payload):
         print(json.dumps(tweet))
 
