@@ -2,14 +2,13 @@ import sys
 import os
 import json
 import time
-import pytz
 import random
 import argparse
 import configparser
 from queue import Queue
 from threading import Thread
 from collections import namedtuple
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import requests
 from bs4 import BeautifulSoup
@@ -290,7 +289,7 @@ class AdvancedSearchWrapper():
         for e in s.findAll('div', {'class' : 'original-tweet'}):
             created_at  = e.find('span', {'class':'_timestamp'}).get(
                     'data-time','')
-            created_at = datetime.fromtimestamp(int(created_at), pytz.UTC)
+            created_at = datetime.fromtimestamp(int(created_at), timezone.utc)
             if STRICTLY_UNTIL and created_at > STRICTLY_UNTIL: continue
             if STRICTLY_SINCE and created_at < STRICTLY_SINCE: continue
             user_id     = e.get('data-user-id', '')
@@ -386,7 +385,7 @@ def parse_date(date):
     """Parses string date"""
     if date and ':' in date:
         strict_date = datetime.strptime(date, '%Y-%m-%d-%H:%M')
-        strict_date = strict_date.replace(tzinfo=pytz.UTC)
+        strict_date = strict_date.replace(tzinfo=timezone.utc)
         parts = date.split('-')
         date = '-'.join(parts[:3])
         return (date, strict_date)
