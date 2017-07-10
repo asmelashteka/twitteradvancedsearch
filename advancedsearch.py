@@ -470,9 +470,9 @@ def main():
         stream = AdvancedSearch(keys)
     else:
         stream = AdvancedSearchWrapper()
-    keywords = payload.get('anywords')
+    sys.stderr.write('PAYLOAD: {}\n'.format(payload))
     for tweet in stream.run(payload):
-        print('{}\t{}'.format(keywords, json.dumps(tweet)))
+        print('{}'.format(json.dumps(tweet)))
 
 
 if __name__ == '__main__':
