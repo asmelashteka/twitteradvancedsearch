@@ -171,11 +171,11 @@ class AdvancedSearchWrapper():
         q = []
         # words
         if args.get('allwords'):
-            all_words = ' AND '.join([w for w in args['allwords'].split()])
+            all_words = ' AND '.join([w for w in args['allwords'].split(',')])
             q.append(all_words)
 
         if args.get('anywords'):
-            any_words = ' OR '.join([w for w in args['anywords'].split()])
+            any_words = ' OR '.join([w for w in args['anywords'].split(',')])
             q.append(any_words)
 
         if args.get('exactphrase'):
@@ -183,7 +183,7 @@ class AdvancedSearchWrapper():
             q.append(exact_phrase)
 
         if args.get('nonewords'):
-            none_words = ' '.join(['- ' + w for w in args['nonewords'].split()])
+            none_words = ' '.join(['- ' + w for w in args['nonewords'].split(',')])
             q.append(none_words)
 
         if args.get('hashtags'):
@@ -384,11 +384,10 @@ def read_config(fin):
 def parse_date(date):
     """Parses string date"""
     if date and ':' in date:
-        strict_date = datetime.strptime(date, '%Y-%m-%d-%H:%M')
+        strict_date = datetime.strptime(date, '%Y-%m-%d %H:%M:%S')
         strict_date = strict_date.replace(tzinfo=timezone.utc)
-        parts = date.split('-')
-        date = '-'.join(parts[:3])
-        return (date, strict_date)
+        day = date.split()[0]
+        return (day, strict_date)
     datetime.strptime(date, '%Y-%m-%d')
     return (date, None)
 
@@ -407,7 +406,7 @@ def check_payload(args):
     until = args.get('until')
     if until:
         until, STRICTLY_UNTIL = parse_date(until)
-        if STRICTLY_UNTIL and STRICTLY_UNTIL.hour + STRICTLY_UNTIL.minute > 0:
+        if STRICTLY_UNTIL and STRICTLY_UNTIL.day == STRICTLY_SINCE.day:
             until = str(STRICTLY_UNTIL + timedelta(days=1)).split()[0]
         args['until'] = until
     return args
@@ -471,8 +470,9 @@ def main():
         stream = AdvancedSearch(keys)
     else:
         stream = AdvancedSearchWrapper()
+    keywords = payload.get('anywords')
     for tweet in stream.run(payload):
-        print(json.dumps(tweet))
+        print('{}\t{}'.format(keywords, json.dumps(tweet)))
 
 
 if __name__ == '__main__':
