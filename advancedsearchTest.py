@@ -1,13 +1,16 @@
-import datetime
 import unittest
+from datetime import datetime, timezone
 
-from advancedsearch import AdvancedSearch, AdvancedSearchWrapper
+from advancedsearch import name2keys, AdvancedSearch, AdvancedSearchWrapper
+
+TWITTER_DATE_FORMAT = '%a %b %d %H:%M:%S %z %Y'
 
 
 class TestAdvancedSearch(unittest.TestCase):
 
     def setUp(self):
-        self.stream = AdvancedSearch(key=1)
+        self.keys = name2keys(key='1')
+        self.stream = AdvancedSearch(self.keys)
 
     def test_location(self):
         payload = {'location': 'hillaryclinton realdonaldtrump'}
@@ -31,34 +34,37 @@ class TestAdvancedSearchWrapper(unittest.TestCase):
         self.MAX_TWEETS = 50
 
     def test_date(self):
-        since = datetime.datetime.strptime('2015-01-06 00:00:00',
+        since = datetime.strptime('2015-01-06 00:00:00',
                 '%Y-%m-%d %H:%M:%S')
-        until = datetime.datetime.strptime('2016-02-06 23:59:59',
+        until = datetime.strptime('2016-02-06 23:59:59',
                 '%Y-%m-%d %H:%M:%S')
-        payload = {'hashtag': 'charlie hebdo',
-                   'since': '2015-01-06',
-                   'until': '2016-02-06'}
+        payload = {'hashtags': 'charlie hebdo',
+                   'since': '2015-01-06 00:00:00',
+                   'until': '2016-02-06 00:00:00'}
+        # make since and until timezone aware
+        since = since.replace(tzinfo=timezone.utc)
+        until = until.replace(tzinfo=timezone.utc)
         for idx, tweet in enumerate(self.stream.run(payload)):
             if idx == self.MAX_TWEETS:
                 self.stream.stop()
                 break
-            created_at = datetime.datetime.strptime(
-                    tweet['created_at'], '%Y-%m-%d %H:%M:%S')
-
+            created_at = datetime.strptime(tweet['created_at'],
+                    TWITTER_DATE_FORMAT)
             self.assertTrue(since <= created_at and created_at <= until)
 
     def test_hashtags(self):
-        payload = {'hashtag': 'charlie hebdo',
-                   'since': '2015-01-06',
-                   'until': '2016-02-06'}
+        payload = {'hashtags': 'charlie hebdo',
+                   'since': '2015-01-06 00:00:00',
+                   'until': '2016-02-06 00:00:00'}
         for idx, tweet in enumerate(self.stream.run(payload)):
+            print(tweet)
             if idx == self.MAX_TWEETS: break
             tweet_text = tweet.get('tweet_text').lower()
 
             self.assertTrue('charlie' in tweet_text or 'hebdo' in tweet_text)
 
-    def test_from_people(self):
-        payload = {'fromuser': 'hillaryclinton realdonaldtrump'}
+    def xtest_from_people(self):
+        payload = {'fromusers': 'hillaryclinton realdonaldtrump'}
         for idx, tweet in enumerate(self.stream.run(payload)):
             if idx == self.MAX_TWEETS: break
             screen_name = tweet.get('screen_name').strip().lower()

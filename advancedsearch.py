@@ -12,12 +12,50 @@ from datetime import date, datetime, timedelta, timezone
 
 import requests
 from bs4 import BeautifulSoup
+from requests_oauthlib import OAuth1
 
-from twitter import REST_API
 
 TWITTER_DATE_FORMAT = '%a %b %d %H:%M:%S %z %Y'
 STRICTLY_SINCE = None
 STRICTLY_UNTIL = None
+
+
+class REST_API(object):
+    """Twitter REST API."""
+    def __init__(self, keys, end_point):
+        self.keys      = keys
+        self.end_point = end_point
+        self.url       = self.set_url()
+        self.session   = self.set_session()
+
+    def set_url(self):
+        if self.end_point == 'status_lookup':
+            return 'https://api.twitter.com/1.1/statuses/lookup.json'
+        elif self.end_point == 'followers_ids':
+            return 'https://api.twitter.com/1.1/followers/ids.json'
+        elif self.endpoint == 'friends_ids':
+            return 'https://api.twitter.com/1.1/friends/ids.json'
+        elif self.endpoint == 'status_retweets':
+            return 'https://api.twitter.com/1.1/statuses/retweets/:id.json'
+
+    def set_session(self):
+        s = requests.Session()
+        s.auth = OAuth1(**self.keys)
+        return s
+
+    def get(self, ids):
+        payload = dict(id=ids)
+        s = self.session.get(url=self.url, params=payload)
+        for tweet in s.iter_lines():
+            if not tweet: continue
+            yield json.loads(tweet.decode('utf-8'))
+
+    def post(self, ids):
+        time.sleep(4)
+        payload = dict(id=ids)
+        s = self.session.post(url=self.url, data=payload)
+        return s.json()
+
 
 class AdvancedSearch():
     """This class provides access to historic tweets.
@@ -114,6 +152,7 @@ class AdvancedSearchWrapper():
         return s
 
     def run(self, payload):
+        payload = check_payload(payload)
         if payload.get('daily'):
             stream = self.daily_search(payload)
         else:
@@ -143,12 +182,14 @@ class AdvancedSearchWrapper():
             html_result, min_position = self.parse_response(r)
             if html_result.strip() == '':
                 break
-            tweets = self.parse_result(html_result)
+            early_exit, tweets = self.parse_result(html_result)
             # yield immediately if result is not in chrnological order
             if not chronological:
                 for tweet in tweets: yield (tweet._asdict())
             else:
                 all_tweets.extend(tweets)
+            if early_exit:
+                break
             if self.status == 'stop':
                 break
             if not min_position:
@@ -231,7 +272,7 @@ class AdvancedSearchWrapper():
         if args.get('retweets'):
             q.append('include:retweets')
 
-        payload = {'q': ' '.join(q), 'f':'tweets', 'vertical':'default'}
+        payload = {'f':'tweets', 'vertical':'news', 'q': ' '.join(q),  'src': 'typd'}
         return payload
 
 
@@ -285,13 +326,18 @@ class AdvancedSearchWrapper():
         parse userid, tweet id and other info from search result
         """
         tweets = []
+        early_exit = False
+        early_tweets = 0
         s = BeautifulSoup(t, 'html.parser')
         for e in s.findAll('div', {'class' : 'original-tweet'}):
             created_at  = e.find('span', {'class':'_timestamp'}).get(
                     'data-time','')
             created_at = datetime.fromtimestamp(int(created_at), timezone.utc)
-            if STRICTLY_UNTIL and created_at > STRICTLY_UNTIL: continue
-            if STRICTLY_SINCE and created_at < STRICTLY_SINCE: continue
+            if STRICTLY_UNTIL and created_at > STRICTLY_UNTIL:
+                early_tweets += 1
+                continue
+            if STRICTLY_SINCE and created_at < STRICTLY_SINCE:
+                continue
             user_id     = e.get('data-user-id', '')
             tweet_id    = e.get('data-tweet-id', '')
             screen_name = e.get('data-screen-name', '')
@@ -317,7 +363,9 @@ class AdvancedSearchWrapper():
                     favorite_count,
                     hashtag)
             tweets.append(tweet)
-        return tweets
+        if early_tweets == 20: # all 20 tweets in result page
+            early_exit = True
+        return (early_exit, tweets)
 
     def gen_days(self, since, until, nofdays=1):
         """Good idea for broad topics that generate lots of tweets
