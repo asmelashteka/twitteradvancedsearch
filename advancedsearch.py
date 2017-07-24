@@ -175,7 +175,9 @@ class AdvancedSearchWrapper():
         chronological = payload.get('chronological')
         self.url = 'https://twitter.com/search'
         payload = self.gen_payload(payload)
+        print(payload)
         r = self.session.get(self.url, params=payload)
+        print(r.url)
         self.url = 'https://twitter.com/i/search/timeline'
         all_tweets = []
         while True:
@@ -203,6 +205,11 @@ class AdvancedSearchWrapper():
                 key=lambda t: datetime.strptime(t.created_at, TWITTER_DATE_FORMAT)):
             yield (tweet._asdict())
 
+    def _split_by_comma_or_space(self, s):
+        if ',' in s:
+            return s.split(',')
+        return s.split()
+
     def gen_payload(self, args):
         """ generate Query string
         q: all "exact" any -none #ht lang:en from:f1 OR from:f2
@@ -228,8 +235,8 @@ class AdvancedSearchWrapper():
             q.append(none_words)
 
         if args.get('hashtags'):
-            hashtags = ' OR '.join(['#' + h if h[0] != '#' else h
-                for h in args['hashtags'].split()])
+            hashtags = self._split_by_comma_or_space(args.get('hashtags'))
+            hashtags = ' OR '.join(['#' + h if h[0] != '#' else h for h in hashtags])
             q.append(hashtags)
 
         # language
@@ -239,23 +246,32 @@ class AdvancedSearchWrapper():
         # people
         # strip off @ if it exists in query for from and to users
         if args.get('fromusers'):
+            fromusers = self._split_by_comma_or_space(args.get('fromusers'))
             from_users = ' OR '.join(['from:' + u if u[0] != '@' else 'from:' + u[1:]
-                for u in args['fromusers'].split()])
+                for u in fromusers])
             q.append(from_users)
 
         if args.get('tousers'):
+            tousers = self._split_by_comma_or_space(args.get('tousers'))
             to_users = ' OR '.join(['to:' + u if u[0] != '@' else 'to:' + u[1:]
-                for u in args['tousers'].split()])
+                for u in tousers])
             q.append(to_users)
 
         if args.get('mentionusers'):
+            mentionusers = self._split_by_comma_or_space(args.get('mentionusers'))
             mention_users = ' OR '.join(['@' + u if u[0] != '@' else u
-                for u in args['mentionusers'].split()])
+                for u in mentionusers])
             q.append(mention_users)
 
         # places
         if args.get('place'):
-            q.append('near:' + args['place'])
+            place = args['place'].strip()
+            within = args.get('within', '15').strip()
+            if within and within != '' and within != '0':
+                within = ' within:{}mi'.format(within)
+            else:
+                within = ''
+            q.append('near:"{}"{}'.format(place, within))
 
         # dates
         if args.get('since'):

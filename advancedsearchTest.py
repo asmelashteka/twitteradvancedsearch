@@ -13,8 +13,8 @@ class TestAdvancedSearch(unittest.TestCase):
         self.stream = AdvancedSearch(self.keys)
 
     def test_location(self):
-        payload = {'location': 'hillaryclinton realdonaldtrump'}
-        pass
+        payload = {'location': 'Berlin, Germany'}
+
 
     def test_language(self):
         payload = {'q': '#charlie OR #hebdo since:2015-01-06 until:2016-02-06'}
@@ -31,7 +31,7 @@ class TestAdvancedSearchWrapper(unittest.TestCase):
 
     def setUp(self):
         self.stream = AdvancedSearchWrapper()
-        self.MAX_TWEETS = 50
+        self.MAX_TWEETS = 500
 
     def test_date(self):
         since = datetime.strptime('2015-01-06 00:00:00',
@@ -57,11 +57,39 @@ class TestAdvancedSearchWrapper(unittest.TestCase):
                    'since': '2015-01-06 00:00:00',
                    'until': '2016-02-06 00:00:00'}
         for idx, tweet in enumerate(self.stream.run(payload)):
-            print(tweet)
             if idx == self.MAX_TWEETS: break
             tweet_text = tweet.get('tweet_text').lower()
-
             self.assertTrue('charlie' in tweet_text or 'hebdo' in tweet_text)
+
+    def test_location_default(self):
+        '''adds within:15mi'''
+        payload = {'place': 'Berlin, Germany',
+                   'since': '2016-12-19 20:00:00',
+                   'until': '2016-12-19 23:59:59'}
+        count = 0
+        for idx, tweet in enumerate(self.stream.run(payload)):
+            if idx > self.MAX_TWEETS:
+                break
+            tweet_text = tweet.get('tweet_text').lower()
+            count = idx + 1
+        print('Berlin, Germany {}'.format(count))
+
+    def test_location_within(self):
+        '''explicit within'''
+        payload = {'place': 'Germany',
+                   'within': '',
+                   'since': '2016-12-19 20:00:00',
+                   'until': '2016-12-19 23:59:59'}
+        count = 0
+        for idx, tweet in enumerate(self.stream.run(payload)):
+            if idx > self.MAX_TWEETS:
+                break
+            tweet_text = tweet.get('tweet_text').lower()
+            #self.assertTrue('berlin' in tweet_text)
+            count = idx + 1
+        print('Germany {}'.format(count))
+
+
 
     def xtest_from_people(self):
         payload = {'fromusers': 'hillaryclinton realdonaldtrump'}
