@@ -43,16 +43,16 @@ class REST_API(object):
         s.auth = OAuth1(**self.keys)
         return s
 
-    def get(self, ids):
-        payload = dict(id=ids)
+    def get(self, payload):
+        #payload = dict(id=ids)
         s = self.session.get(url=self.url, params=payload)
         for tweet in s.iter_lines():
             if not tweet: continue
             yield json.loads(tweet.decode('utf-8'))
 
-    def post(self, ids):
+    def post(self, payload):
         time.sleep(4)
-        payload = dict(id=ids)
+        #payload = dict(id=ids)
         s = self.session.post(url=self.url, data=payload)
         return s.json()
 
@@ -109,8 +109,9 @@ class AdvancedSearch():
         api = REST_API(keys=self.keys, end_point='status_lookup')
         for tweet_ids in self.gen_chunks():
             if tweet_ids == []: break
-            tweet_ids = ','.join(tweet_ids)
-            for tweet in sorted(api.post(ids=tweet_ids),
+            payload = {'id': ','.join(tweet_ids),
+                       'tweet_mode': 'extended'}
+            for tweet in sorted(api.post(payload=payload),
                 key=lambda t: datetime.strptime(t['created_at'], TWITTER_DATE_FORMAT)):
                 self.TWEETS.put(tweet)
         self.TWEETS.put(AdvancedSearch._sentinel)
