@@ -208,7 +208,7 @@ class AdvancedSearchWrapper():
 
     def _split_by_comma_or_space(self, s):
         if ',' in s:
-            return s.split(',')
+            return [h.strip() for h in s.split(',')]
         return s.split()
 
     def gen_payload(self, args):
