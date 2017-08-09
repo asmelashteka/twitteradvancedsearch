@@ -344,16 +344,18 @@ class AdvancedSearchWrapper():
         """
         tweets = []
         early_exit = False
-        early_tweets = 0
+        nof_tweets_all = 0
+        nof_tweets_early = 0
         s = BeautifulSoup(t, 'html.parser')
         for e in s.findAll('div', {'class' : 'original-tweet'}):
+            nof_tweets_all += 1
             created_at  = e.find('span', {'class':'_timestamp'}).get(
                     'data-time','')
             created_at = datetime.fromtimestamp(int(created_at), timezone.utc)
             if STRICTLY_UNTIL and created_at > STRICTLY_UNTIL:
-                early_tweets += 1
                 continue
             if STRICTLY_SINCE and created_at < STRICTLY_SINCE:
+                nof_tweets_early += 1
                 continue
             user_id     = e.get('data-user-id', '')
             tweet_id    = e.get('data-tweet-id', '')
@@ -380,7 +382,7 @@ class AdvancedSearchWrapper():
                     favorite_count,
                     hashtag)
             tweets.append(tweet)
-        if early_tweets == 20: # all 20 tweets in result page
+        if nof_tweets_early == nof_tweets_all:
             early_exit = True
         return (early_exit, tweets)
 
