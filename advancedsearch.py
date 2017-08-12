@@ -348,9 +348,13 @@ class AdvancedSearchWrapper():
         nof_tweets_early = 0
         s = BeautifulSoup(t, 'html.parser')
         for e in s.findAll('div', {'class' : 'original-tweet'}):
+            created_at  = e.find('span', {'class':'_timestamp'})
+            if created_at is None:
+                continue
+            created_at = created_at.get('data-time',None)
+            if created_at is None:
+                continue
             nof_tweets_all += 1
-            created_at  = e.find('span', {'class':'_timestamp'}).get(
-                    'data-time','')
             created_at = datetime.fromtimestamp(int(created_at), timezone.utc)
             if STRICTLY_UNTIL and created_at > STRICTLY_UNTIL:
                 continue
