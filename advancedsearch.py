@@ -183,7 +183,7 @@ class AdvancedSearchWrapper():
         all_tweets = []
         while True:
             html_result, min_position = self.parse_response(r)
-            if html_result.strip() == '':
+            if html_result is None or html_result.strip() == '':
                 break
             early_exit, tweets = self.parse_result(html_result)
             # yield immediately if result is not in chrnological order
@@ -299,6 +299,8 @@ class AdvancedSearchWrapper():
         to iterate for next call
         """
         r_type = r.headers.get('content-type')
+        if r_type is None:
+            return (None, None)
         if 'html' in r_type: # first call
             html_result = r.text
             min_position = self.get_min_position(html_result)
@@ -308,7 +310,7 @@ class AdvancedSearchWrapper():
             min_position = j.get('min_position')
         else:
             sys.stderr.write('{} not valid HTML or JSON response.\n'.format(r_type))
-            exit(1)
+            return (None, None)
         return (html_result, min_position)
 
 
