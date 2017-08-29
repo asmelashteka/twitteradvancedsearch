@@ -111,7 +111,8 @@ class AdvancedSearch():
             if tweet_ids == []: break
             payload = {'id': ','.join(tweet_ids),
                        'tweet_mode': 'extended'}
-            for tweet in sorted(api.post(payload=payload),
+            raw_tweets = [t for t in api.post(payload=payload) if 'created_at' in t]
+            for tweet in sorted(raw_tweets,
                 key=lambda t: datetime.strptime(t['created_at'], TWITTER_DATE_FORMAT)):
                 self.TWEETS.put(tweet)
         self.TWEETS.put(AdvancedSearch._sentinel)
