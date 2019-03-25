@@ -152,3 +152,7 @@ Please cite [1](#Sover!) if using this code for building a demo or [2](#real-tim
   year={2019}
 }
 ```
+
+## License
+
+Twitter Advanced Search is MIT-licensed.
