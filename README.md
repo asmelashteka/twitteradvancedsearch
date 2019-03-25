@@ -119,3 +119,36 @@ advanced search](https://support.twitter.com/articles/71577).
 | traffic ?                           |  containing "traffic" and asking a question.
 | hilarious filter:links              |  containing "hilarious" and linking to URLs.
 | news source:twitterfeed             |  containing "news" and entered via TwitterFeed
+
+
+## References
+
+Please cite [1](#Sover!) if using this code for building a demo or [2](#real-time-adaptive-crawler) if using for crawling tweets for other purposes.
+
+### [Sover! Social Media Observer](#Sover!)
+
+[1] Hadgu, Asmelash Teka, Sallam Abualhaija, and Claudia Niederée. [*Sover! Social Media Observer.*](https://dl.acm.org/citation.cfm?id=3210173)
+
+```
+@inproceedings{hadgu2018sover,
+  title={Sover! Social Media Observer},
+  author={Hadgu, Asmelash Teka and Abualhaija, Sallam and Nieder{\'e}e, Claudia},
+  booktitle={The 41st International ACM SIGIR Conference on Research \& Development in Information Retrieval},
+  pages={1305--1308},
+  year={2018},
+  organization={ACM}
+}
+```
+
+### [Real-time Adaptive Crawler for Tracking Unfolding Events on Twitter](#real-time-adaptive-crawler)
+
+[2] Hadgu, Asmelash Teka, Sallam Abualhaija, and Claudia Niederée. [*Real-time Adaptive Crawler for Tracking Unfolding Events on Twitter*](#real-time-adaptive-crawler)
+
+```
+@article{hadgu2019real,
+  title={Real-time Adaptive Crawler for Tracking Unfolding Events on Twitter},
+  author={Hadgu, Asmelash Teka and Abualhaija, Sallam and Nieder{\'e}e, Claudia},
+  journal={ISCRAM},
+  year={2019}
+}
+```
