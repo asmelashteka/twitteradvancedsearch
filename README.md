@@ -2,6 +2,7 @@
 
 This tool is a wrapper around [Twitter Advanced
 Search](https://twitter.com/search-advanced).
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.2605413.svg)](https://doi.org/10.5281/zenodo.2605413)
 
 ## Usage Examples:
 
